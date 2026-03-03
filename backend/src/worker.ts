@@ -11,7 +11,7 @@
 
 import { Decimal } from "@prisma/client/runtime/library";
 import prisma from "./plugins/prisma.js";
-import priceService from "./plugins/priceService-optimized.js";
+import priceService from "./plugins/priceService/index.js";
 import { loggers } from "./utils/logger.js";
 
 const logger = loggers.worker;

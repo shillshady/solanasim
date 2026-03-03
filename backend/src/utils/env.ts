@@ -1,5 +1,6 @@
 // Environment variable validation and configuration
 import { z } from 'zod';
+import logger from '../utils/logger.js';
 
 // Define the schema for environment variables
 const envSchema = z.object({
@@ -66,12 +67,12 @@ export function validateEnvironment(): EnvConfig {
 
       // Ensure JWT secret is strong
       if (parsed.JWT_SECRET.length < 64) {
-        console.warn('⚠️  WARNING: JWT_SECRET should be at least 64 characters in production');
+        logger.warn('JWT_SECRET should be at least 64 characters in production');
       }
 
       // Check for monitoring
       if (!parsed.SENTRY_DSN) {
-        console.warn('⚠️  WARNING: SENTRY_DSN not configured - error tracking disabled');
+        logger.warn('SENTRY_DSN not configured - error tracking disabled');
       }
 
       // Validate rewards wallet if VSOL token is configured
@@ -83,8 +84,8 @@ export function validateEnvironment(): EnvConfig {
     config = parsed;
 
     // Log configuration (without sensitive data)
-    console.log('✅ Environment validation successful');
-    console.log('📊 Configuration:', {
+    logger.info('Environment validation successful');
+    logger.info({
       NODE_ENV: parsed.NODE_ENV,
       PORT: parsed.PORT,
       LOG_LEVEL: parsed.LOG_LEVEL,
@@ -93,25 +94,22 @@ export function validateEnvironment(): EnvConfig {
       JWT_SECRET: '***configured***',
       HELIUS_API: parsed.HELIUS_API ? '***configured***' : 'not configured',
       SENTRY_DSN: parsed.SENTRY_DSN ? '***configured***' : 'not configured',
-    });
+    }, 'Configuration');
 
     return parsed;
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Environment validation failed:');
+      logger.error('Environment validation failed');
       error.issues.forEach((err: any) => {
-        console.error(`  - ${err.path.join('.')}: ${err.message}`);
+        logger.error({ path: err.path.join('.'), message: err.message }, 'Validation error');
       });
 
       // In development, provide helpful setup instructions
       if (process.env.NODE_ENV !== 'production') {
-        console.error('\n📝 Setup instructions:');
-        console.error('1. Copy backend/.env.example to backend/.env');
-        console.error('2. Fill in the required values');
-        console.error('3. Restart the application\n');
+        logger.error('Setup instructions: 1) Copy backend/.env.example to backend/.env 2) Fill in the required values 3) Restart the application');
       }
     } else {
-      console.error('❌ Environment validation error:', error);
+      logger.error({ err: error }, 'Environment validation error');
     }
 
     // Exit with error code

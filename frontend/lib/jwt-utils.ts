@@ -1,5 +1,6 @@
 // JWT utility functions for token validation
 import { jwtDecode } from 'jwt-decode'
+import { errorLogger } from './error-logger'
 
 interface JWTPayload {
   userId: string
@@ -19,7 +20,7 @@ export function decodeToken(token: string): JWTPayload | null {
   try {
     return jwtDecode<JWTPayload>(token)
   } catch (error) {
-    console.error('Failed to decode token:', error)
+    errorLogger.error('Failed to decode token', { error: error as Error, component: 'jwt-utils' })
     return null
   }
 }

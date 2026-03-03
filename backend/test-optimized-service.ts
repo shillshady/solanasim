@@ -6,7 +6,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import optimizedPriceService from './src/plugins/priceService-optimized.js';
+import optimizedPriceService from './src/plugins/priceService/index.js';
 
 console.log('🧪 Testing Optimized Price Service (Developer Plan)');
 console.log('====================================================\n');

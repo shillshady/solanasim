@@ -1,5 +1,7 @@
 // Purchase verification service - verifies Solana transactions
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { loggers } from "../utils/logger.js";
+const logger = loggers.purchase;
 
 const RECIPIENT_WALLET = process.env.RECIPIENT_WALLET || '8i6HFhHLfBX9Wwd2BTkd7yeXZGcdwtAgg4vRRB4xf1iL';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_RPC || 'https://api.mainnet-beta.solana.com';
@@ -118,7 +120,7 @@ export async function verifyTransaction(
     };
 
   } catch (error: any) {
-    console.error('Transaction verification error:', error);
+    logger.error({ err: error }, "Transaction verification error");
     return {
       success: false,
       error: error.message || 'Failed to verify transaction'

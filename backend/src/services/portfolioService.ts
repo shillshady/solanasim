@@ -6,6 +6,8 @@ import { getTokenMetaBatch } from "./tokenService.js";
 import { portfolioCoalescer } from "../utils/requestCoalescer.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import { D } from "../utils/pnl.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.portfolio;
 
 // Smart number formatting for memecoin prices
 function formatPrice(price: Decimal): string {
@@ -113,7 +115,7 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
 
   // Fetch metadata for all tokens using batch API (1 call instead of N calls!)
   const metadataResults = await getTokenMetaBatch(mints).catch(err => {
-    console.warn(`Batch metadata fetch failed in portfolio:`, err);
+    logger.warn({ err }, "Batch metadata fetch failed in portfolio");
     return [];
   });
 
@@ -149,7 +151,7 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
       } catch (err: any) {
         // Only log unexpected errors
         if (!err?.message?.includes('aborted') && !err?.message?.includes('404')) {
-          console.error(`[Portfolio] Unexpected error fetching price for ${position.mint.slice(0, 8)}:`, err);
+          logger.error({ mint: position.mint.slice(0, 8), err }, "Unexpected error fetching price");
         }
       }
     }
@@ -223,7 +225,7 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
     const cacheKey = `portfolio:stats:${userId}`;
     await redis.setex(cacheKey, 60, JSON.stringify(tradingStats));
   } catch (error) {
-    console.warn(`Failed to cache trading stats in Redis:`, error);
+    logger.warn({ err: error }, "Failed to cache trading stats in Redis");
   }
 
   const totalRealizedUsd = totalRealizedPnl;
@@ -319,7 +321,7 @@ export async function getPortfolioTradingStats(userId: string) {
       return JSON.parse(cached);
     }
   } catch (error) {
-    console.warn(`Redis cache miss for trading stats ${userId}:`, error);
+    logger.warn({ userId, err: error }, "Redis cache miss for trading stats");
   }
 
   // Aggregate trading stats with DB-level queries
@@ -342,7 +344,7 @@ export async function getPortfolioTradingStats(userId: string) {
   try {
     await redis.setex(cacheKey, 60, JSON.stringify(stats));
   } catch (error) {
-    console.warn(`Failed to cache trading stats in Redis:`, error);
+    logger.warn({ err: error }, "Failed to cache trading stats in Redis");
   }
 
   return stats;

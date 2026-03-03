@@ -7,6 +7,7 @@
  * - Never show scary things like Infinity% or $0.00000000 unless appropriate
  * - Proper handling of edge cases (zero cost basis, airdrops, etc.)
  */
+import { errorLogger } from './error-logger';
 
 // Compact formatter for large numbers
 export const compact = new Intl.NumberFormat("en-US", { 
@@ -341,11 +342,9 @@ export function formatNumber(n: number, options?: {
  */
 export function formatDiagnostic(value: any, label: string): void {
   if (!isFinite(value) || value === null || value === undefined) {
-    console.warn(`[FORMAT DIAGNOSTIC] ${label}:`, {
-      value,
-      type: typeof value,
-      isFinite: isFinite(value),
-      isNaN: isNaN(value)
+    errorLogger.warn(`[FORMAT DIAGNOSTIC] ${label}`, {
+      metadata: { value, type: typeof value, isFiniteVal: isFinite(value), isNaN: isNaN(value) },
+      component: 'format'
     });
   }
 }
@@ -380,7 +379,7 @@ export function lamportsToSolStr(lamportsStr: string): string {
     const fracStr = remainder.toString().padStart(9, "0").replace(/0+$/, "");
     return fracStr.length ? `${whole}.${fracStr}` : whole.toString();
   } catch (error) {
-    console.error("❌ lamportsToSolStr failed:", error, lamportsStr);
+    errorLogger.error('lamportsToSolStr failed', { error: error as Error, metadata: { lamportsStr }, component: 'format' });
     return "0";
   }
 }
@@ -406,7 +405,7 @@ export function solToLamports(solAmount: number | string): bigint {
       return BigInt(Math.round(solAmount * Number(LAMPORTS_PER_SOL)));
     }
   } catch (error) {
-    console.error("❌ solToLamports failed:", error, solAmount);
+    errorLogger.error('solToLamports failed', { error: error as Error, metadata: { solAmount }, component: 'format' });
     return 0n;
   }
 }
@@ -426,7 +425,7 @@ export function usdToLamports(usdPrice: number, solPriceUsd: number): bigint {
     const solEquivalent = usdPrice / solPriceUsd;
     return solToLamports(solEquivalent);
   } catch (error) {
-    console.error("❌ usdToLamports failed:", error, { usdPrice, solPriceUsd });
+    errorLogger.error('usdToLamports failed', { error: error as Error, metadata: { usdPrice, solPriceUsd }, component: 'format' });
     return 0n;
   }
 }
@@ -445,7 +444,7 @@ export function lamportsToUsd(lamportsStr: string, solPriceUsd: number): number 
     const solAmount = parseFloat(solStr); // Only parse at final step for USD calculation
     return solAmount * solPriceUsd;
   } catch (error) {
-    console.error("❌ lamportsToUsd failed:", error, { lamportsStr, solPriceUsd });
+    errorLogger.error('lamportsToUsd failed', { error: error as Error, metadata: { lamportsStr, solPriceUsd }, component: 'format' });
     return 0;
   }
 }

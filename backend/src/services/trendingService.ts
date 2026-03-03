@@ -5,6 +5,8 @@ import { getTokenMetaBatch } from "./tokenService.js";
 import { robustFetch, fetchJSON } from "../utils/fetch.js";
 import redis from "../plugins/redis.js";
 import { safeStringify, safeParse } from "../utils/json.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.trending;
 
 export interface TrendingToken {
   mint: string;
@@ -30,56 +32,53 @@ export async function getTrendingTokens(limit: number = 20, sortBy: BirdeyeSortB
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`[TRENDING CACHE HIT] Returning cached trending tokens`);
+      logger.debug("Returning cached trending tokens");
       return safeParse(cached);
     }
   } catch (error) {
-    console.warn('Redis cache read failed for trending:', error);
+    logger.warn({ err: error }, "Redis cache read failed for trending");
   }
 
   try {
-    console.log(`Fetching trending tokens with limit: ${limit}, sortBy: ${sortBy}`);
+    logger.info({ limit, sortBy }, "Fetching trending tokens");
 
     // Use Birdeye for trending data first
     const birdeyeTrending = await getBirdeyeTrending(limit, sortBy);
-    console.log(`Birdeye returned ${birdeyeTrending.length} tokens`);
+    logger.info({ count: birdeyeTrending.length }, "Birdeye returned tokens");
 
     if (birdeyeTrending.length > 0) {
-      console.log('Using Birdeye data for trending tokens');
-      // Birdeye already provides all necessary data - return directly for speed
-      // Internal stats (tradeCount, uniqueTraders) are mostly 0 for trending tokens anyway
-      console.log(`Returning ${birdeyeTrending.length} Birdeye trending tokens (fast mode)`);
+      logger.info({ count: birdeyeTrending.length }, "Using Birdeye data for trending tokens (fast mode)");
 
       // Cache result in Redis for 60 seconds
       try {
         await redis.setex(cacheKey, 60, safeStringify(birdeyeTrending));
       } catch (error) {
-        console.warn('Failed to cache trending tokens:', error);
+        logger.warn({ err: error }, "Failed to cache trending tokens");
       }
 
       return birdeyeTrending;
     }
 
     // Fallback to DexScreener if Birdeye fails
-    console.log('Birdeye failed, trying DexScreener fallback');
+    logger.info("Birdeye failed, trying DexScreener fallback");
     const dexTrending = await getDexScreenerTrending(limit);
-    console.log(`DexScreener returned ${dexTrending.length} tokens (fast mode - no enrichment)`);
+    logger.info({ count: dexTrending.length }, "DexScreener returned tokens (fast mode)");
     // Skip internal enrichment for performance - DexScreener data is sufficient
 
     // Cache DexScreener result
     try {
       await redis.setex(cacheKey, 60, safeStringify(dexTrending));
     } catch (error) {
-      console.warn('Failed to cache trending tokens:', error);
+      logger.warn({ err: error }, "Failed to cache trending tokens");
     }
 
     return dexTrending;
 
   } catch (error) {
-    console.error('Error fetching trending tokens:', error);
+    logger.error({ err: error }, "Error fetching trending tokens");
 
     // Fallback to internal data only
-    console.log('All external APIs failed, using internal data fallback');
+    logger.info("All external APIs failed, using internal data fallback");
     return getInternalTrendingTokens(limit);
   }
 }
@@ -89,8 +88,7 @@ async function getBirdeyeTrending(limit: number, sortBy: BirdeyeSortBy = 'rank')
     // Temporarily hardcode the API key for testing
     const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || "caa61fdc964643e197d86d70d5d70671";
 
-    console.log('Using Birdeye API key:', BIRDEYE_API_KEY ? 'Found' : 'Not found');
-    console.log(`Fetching trending tokens sorted by: ${sortBy}`);
+    logger.debug({ hasApiKey: !!BIRDEYE_API_KEY, sortBy }, "Fetching Birdeye trending tokens");
 
     // Use the correct Birdeye trending endpoint with dynamic sort_by
     const response = await robustFetch(`https://public-api.birdeye.so/defi/token_trending?sort_by=${sortBy}&sort_type=desc&offset=0&limit=${limit}&ui_amount_mode=scaled`, {
@@ -105,14 +103,13 @@ async function getBirdeyeTrending(limit: number, sortBy: BirdeyeSortBy = 'rank')
     });
 
     if (!response.ok) {
-      console.error(`Birdeye API error: ${response.status} ${response.statusText}`);
       const errorText = await response.text().catch(() => 'No error details');
-      console.error('Birdeye error response:', errorText);
+      logger.error({ status: response.status, statusText: response.statusText, errorText }, "Birdeye API error");
       throw new Error(`Birdeye API error: ${response.status}`);
     }
 
     const data = await response.json() as any;
-    console.log('Birdeye API response structure:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
+    logger.debug({ keys: Object.keys(data) }, "Birdeye API response structure");
 
     // Handle the Birdeye trending API response structure
     let tokens = [];
@@ -121,11 +118,11 @@ async function getBirdeyeTrending(limit: number, sortBy: BirdeyeSortBy = 'rank')
     } else if (data.tokens) {
       tokens = data.tokens;
     } else {
-      console.warn('Unexpected Birdeye response structure:', Object.keys(data));
+      logger.warn({ keys: Object.keys(data) }, "Unexpected Birdeye response structure");
       return [];
     }
 
-    console.log(`Found ${tokens.length} tokens from Birdeye trending API`);
+    logger.info({ count: tokens.length }, "Found tokens from Birdeye trending API");
 
     return tokens
       .map((token: any) => {
@@ -162,16 +159,13 @@ async function getBirdeyeTrending(limit: number, sortBy: BirdeyeSortBy = 'rank')
         // Final validation
         const isValid = token.mint && token.symbol && token.priceUsd > 0;
         if (!isValid) {
-          console.log(`Filtering out invalid token:`, token);
+          logger.debug({ token }, "Filtering out invalid token");
         }
         return isValid;
       });
 
   } catch (error) {
-    console.error('Birdeye trending fetch failed:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-    }
+    logger.error({ err: error }, "Birdeye trending fetch failed");
     return [];
   }
 }
@@ -209,7 +203,7 @@ async function enrichWithInternalData(tokens: TrendingToken[]): Promise<Trending
 
   // Batch fetch metadata for all tokens (single API call - massive speedup!)
   const metadataResults = await getTokenMetaBatch(mints).catch(err => {
-    console.warn(`Batch metadata fetch failed:`, err);
+    logger.warn({ err }, "Batch metadata fetch failed");
     return [];
   });
 
@@ -234,7 +228,7 @@ async function enrichWithInternalData(tokens: TrendingToken[]): Promise<Trending
   });
 
   const duration = Date.now() - startTime;
-  console.log(`[TRENDING ENRICHMENT] Took ${duration}ms for ${tokens.length} tokens`);
+  logger.info({ durationMs: duration, count: tokens.length }, "Trending enrichment complete");
 
   return enrichedTokens;
 }
@@ -266,7 +260,7 @@ async function getDexScreenerTrending(limit: number): Promise<TrendingToken[]> {
     return processDexScreenerPairs(data.pairs || [], limit);
 
   } catch (error: any) {
-    console.error(`DexScreener trending failed (${error.code || error.message}):`, error.message);
+    logger.error({ code: error.code, err: error.message }, "DexScreener trending failed");
 
     // Fallback to popular Solana tokens with current prices
     return getPopularSolanaTokens();
@@ -399,7 +393,7 @@ async function getPopularSolanaTokens(): Promise<TrendingToken[]> {
         uniqueTraders: 0  // No internal data available in fallback mode
       });
     } catch (error) {
-      console.error(`Error loading popular token ${tokenData.mint}:`, error);
+      logger.error({ mint: tokenData.mint, err: error }, "Error loading popular token");
     }
   }
   
@@ -454,7 +448,7 @@ async function getInternalTrendingTokens(limit: number): Promise<TrendingToken[]
 
   // Batch fetch metadata (single API call - massive speedup!)
   const metadataResults = await getTokenMetaBatch(mints).catch(err => {
-    console.warn(`Batch metadata fetch failed:`, err);
+    logger.warn({ err }, "Batch metadata fetch failed");
     return [];
   });
 
@@ -485,7 +479,7 @@ async function getInternalTrendingTokens(limit: number): Promise<TrendingToken[]
   });
 
   const duration = Date.now() - startTime;
-  console.log(`[INTERNAL TRENDING] Took ${duration}ms for ${trendingTokens.length} tokens`);
+  logger.info({ durationMs: duration, count: trendingTokens.length }, "Internal trending complete");
 
   return trendingTokens.sort((a, b) => b.volume24h - a.volume24h);
 }

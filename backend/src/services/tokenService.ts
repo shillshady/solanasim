@@ -4,6 +4,8 @@ import redis from "../plugins/redis.js";
 import { robustFetch, fetchJSON } from "../utils/fetch.js";
 import { safeStringify, safeParse } from "../utils/json.js";
 import { tokenMetadataCoalescer } from "../utils/requestCoalescer.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.token;
 
 const HELIUS = process.env.HELIUS_API!;
 const DEX = "https://api.dexscreener.com";
@@ -61,11 +63,11 @@ async function getJupiterToken(mint: string, useAllList: boolean = false): Promi
     }
     jupiterCacheExpiry = now + JUPITER_CACHE_TTL;
 
-    console.log(`[TokenService] Cached ${cacheMap.size} tokens from Jupiter ${useAllList ? 'all' : 'strict'} list`);
+    logger.info({ count: cacheMap.size, list: useAllList ? 'all' : 'strict' }, "Cached tokens from Jupiter list");
 
     return cacheMap.get(mint) || null;
   } catch (e: any) {
-    console.warn(`Failed to fetch Jupiter ${useAllList ? 'all' : 'strict'} list:`, e.message);
+    logger.warn({ list: useAllList ? 'all' : 'strict', err: e.message }, "Failed to fetch Jupiter list");
     return null;
   }
 }
@@ -86,7 +88,7 @@ async function getTokenMetaUncached(mint: string) {
     }
   } catch (error) {
     // Redis failure is non-critical, continue to DB
-    console.warn(`Redis cache miss for token ${mint}:`, error);
+    logger.warn({ mint, err: error }, "Redis cache miss for token");
   }
 
   // Try DB cache second
@@ -104,7 +106,7 @@ async function getTokenMetaUncached(mint: string) {
     try {
       await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
     } catch (error) {
-      console.warn(`Failed to cache token metadata in Redis:`, error);
+      logger.warn({ err: error }, "Failed to cache token metadata in Redis");
     }
     return token;
   }
@@ -139,7 +141,7 @@ async function getTokenMetaUncached(mint: string) {
       try {
         await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
       } catch (error) {
-        console.warn(`Failed to cache token metadata in Redis:`, error);
+        logger.warn({ err: error }, "Failed to cache token metadata in Redis");
       }
 
       return token;
@@ -147,7 +149,7 @@ async function getTokenMetaUncached(mint: string) {
   } catch (e: any) {
     // Only log non-DNS errors to reduce noise
     if (e.code !== 'ENOTFOUND') {
-      console.warn(`Jupiter strict list failed (${e.code || e.message}):`, e.message);
+      logger.warn({ code: e.code, err: e.message }, "Jupiter strict list failed");
     }
   }
 
@@ -176,7 +178,7 @@ async function getTokenMetaUncached(mint: string) {
       try {
         await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
       } catch (error) {
-        console.warn(`Failed to cache token metadata in Redis:`, error);
+        logger.warn({ err: error }, "Failed to cache token metadata in Redis");
       }
 
       return token;
@@ -184,7 +186,7 @@ async function getTokenMetaUncached(mint: string) {
   } catch (e: any) {
     // Only log non-DNS errors to reduce noise
     if (e.code !== 'ENOTFOUND') {
-      console.warn(`Jupiter all list failed (${e.code || e.message}):`, e.message);
+      logger.warn({ code: e.code, err: e.message }, "Jupiter all list failed");
     }
   }
 
@@ -192,7 +194,7 @@ async function getTokenMetaUncached(mint: string) {
   try {
     // Validate mint address format (base58, 32-44 chars)
     if (!mint || mint.length < 32 || mint.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(mint)) {
-      console.warn(`Invalid mint address format: ${mint}`);
+      logger.warn({ mint }, "Invalid mint address format");
       return token;
     }
 
@@ -228,7 +230,7 @@ async function getTokenMetaUncached(mint: string) {
       try {
         await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
       } catch (error) {
-        console.warn(`Failed to cache token metadata in Redis:`, error);
+        logger.warn({ err: error }, "Failed to cache token metadata in Redis");
       }
 
       return token;
@@ -236,7 +238,7 @@ async function getTokenMetaUncached(mint: string) {
   } catch (e: any) {
     // Don't log 400 errors (invalid token addresses) to reduce noise
     if (!e.message?.includes('400') && !e.message?.includes('Bad Request')) {
-      console.warn(`Helius metadata failed (${e.code || e.message}):`, e.message);
+      logger.warn({ code: e.code, err: e.message }, "Helius metadata failed");
     }
   }
 
@@ -274,13 +276,13 @@ async function getTokenMetaUncached(mint: string) {
       try {
         await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
       } catch (error) {
-        console.warn(`Failed to cache token metadata in Redis:`, error);
+        logger.warn({ err: error }, "Failed to cache token metadata in Redis");
       }
 
       return token;
     }
   } catch (e: any) {
-    console.warn(`DexScreener metadata failed (${e.code || e.message}):`, e.message);
+    logger.warn({ code: e.code, err: e.message }, "DexScreener metadata failed");
   }
 
   // 4. Final fallback: If we have token data but NO logo, try Jupiter one more time for just the image
@@ -301,10 +303,10 @@ async function getTokenMetaUncached(mint: string) {
         try {
           await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
         } catch (error) {
-          console.warn(`Failed to cache token metadata in Redis:`, error);
+          logger.warn({ err: error }, "Failed to cache token metadata in Redis");
         }
 
-        console.log(`✓ Found missing logo for ${token.symbol || mint} on Jupiter`);
+        logger.info({ symbol: token.symbol || mint }, "Found missing logo on Jupiter");
       }
     } catch (e: any) {
       // Silent fail - this is just a bonus attempt
@@ -349,10 +351,10 @@ async function getTokenMetaUncached(mint: string) {
         try {
           await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
         } catch (error) {
-          console.warn(`Failed to cache token metadata in Redis:`, error);
+          logger.warn({ err: error }, "Failed to cache token metadata in Redis");
         }
 
-        console.log(`✓ Found on-chain logo for ${token.symbol || mint}: ${imageUri}`);
+        logger.info({ symbol: token.symbol || mint, imageUri }, "Found on-chain logo");
       }
     } catch (e: any) {
       // Silent fail - this is optional on-chain metadata
@@ -376,10 +378,10 @@ async function getTokenMetaUncached(mint: string) {
       try {
         await redis.setex(`token:meta:${REDIS_TOKEN_META_VERSION}:${mint}`, REDIS_TOKEN_META_TTL, safeStringify(token));
       } catch (error) {
-        console.warn(`Failed to cache token metadata in Redis:`, error);
+        logger.warn({ err: error }, "Failed to cache token metadata in Redis");
       }
     } catch (e: any) {
-      console.warn(`Failed to create minimal token entry for ${mint}:`, e.message);
+      logger.warn({ mint, err: e.message }, "Failed to create minimal token entry");
     }
   }
 
@@ -445,7 +447,7 @@ export async function getTokenMetaBatch(mints: string[]) {
       return results.filter(Boolean);
     }
 
-    console.log(`[TokenService] Batch fetching ${missingMints.length} tokens from Helius DAS API`);
+    logger.info({ count: missingMints.length }, "Batch fetching tokens from Helius DAS API");
 
     // Batch fetch missing tokens from Helius DAS API (max 1000 per call)
     const dasResponse = await fetchJSON<any>(
@@ -506,14 +508,14 @@ export async function getTokenMetaBatch(mints: string[]) {
 
     await Promise.all(upsertPromises);
 
-    console.log(`[TokenService] ✓ Batch fetched ${assets.length} tokens (${mints.length - uncachedMints.length} from cache)`);
+    logger.info({ fetched: assets.length, fromCache: mints.length - uncachedMints.length }, "Batch fetched tokens");
 
     return results.filter(Boolean);
   } catch (e: any) {
-    console.error(`Batch metadata fetch failed:`, e.message);
+    logger.error({ err: e.message }, "Batch metadata fetch failed");
 
     // Fallback to individual fetches
-    console.log(`[TokenService] Falling back to individual token fetches for ${mints.length} tokens`);
+    logger.info({ count: mints.length }, "Falling back to individual token fetches");
     return Promise.all(mints.map(mint => getTokenMeta(mint)));
   }
 }
@@ -523,11 +525,11 @@ export async function getTokenInfo(mint: string) {
   try {
     const [metadata, priceData] = await Promise.all([
       getTokenMeta(mint).catch(err => {
-        console.warn(`getTokenMeta failed for ${mint}:`, err.message);
+        logger.warn({ mint, err: err.message }, "getTokenMeta failed");
         return null;
       }),
       getTokenPriceData(mint).catch(err => {
-        console.warn(`getTokenPriceData failed for ${mint}:`, err.message);
+        logger.warn({ mint, err: err.message }, "getTokenPriceData failed");
         return { lastPrice: null, lastTs: null };
       })
     ]);
@@ -544,7 +546,7 @@ export async function getTokenInfo(mint: string) {
       mint // Include both for compatibility
     };
   } catch (error: any) {
-    console.error(`getTokenInfo failed for ${mint}:`, error);
+    logger.error({ mint, err: error }, "getTokenInfo failed");
     return null;
   }
 }
@@ -574,7 +576,7 @@ async function getTokenPriceDataUncached(mint: string) {
   } catch (e: any) {
     // Only log non-DNS errors to reduce noise
     if (e.code !== 'ENOTFOUND') {
-      console.warn(`Jupiter price failed (${e.code || e.message}):`, e.message);
+      logger.warn({ code: e.code, err: e.message }, "Jupiter price failed");
     }
   }
 
@@ -595,7 +597,7 @@ async function getTokenPriceDataUncached(mint: string) {
       };
     }
   } catch (e: any) {
-    console.warn(`DexScreener price failed (${e.code || e.message}):`, e.message);
+    logger.warn({ code: e.code, err: e.message }, "DexScreener price failed");
   }
 
   return {

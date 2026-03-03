@@ -11,6 +11,7 @@ import {
   Coin98WalletAdapter,
 } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
+import { errorLogger } from './error-logger';
 
 // Import the default wallet adapter CSS for styling
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -53,7 +54,7 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
           new Coin98WalletAdapter(),
         ];
       } catch (error) {
-        console.warn('Error initializing wallet adapters:', error);
+        errorLogger.warn('Error initializing wallet adapters', { error: error as Error, component: 'SolanaWalletProvider' });
         return [];
       }
     },

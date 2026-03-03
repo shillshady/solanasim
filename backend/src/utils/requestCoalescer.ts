@@ -10,6 +10,8 @@
  * - Redis connection flooding
  */
 
+import logger from '../utils/logger.js';
+
 type PendingRequest<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -45,7 +47,7 @@ export class RequestCoalescer {
       if (Date.now() - existing.timestamp < ttlMs) {
         this.stats.hits++;
         this.stats.savings++;
-        console.log(`🎯 Coalesced request: ${key} (saved ${this.stats.savings} requests)`);
+        logger.debug({ key, totalSavings: this.stats.savings }, "Coalesced request");
         return existing.promise;
       } else {
         // Expired, remove it
@@ -112,7 +114,7 @@ export class RequestCoalescer {
     }
 
     if (cleared > 0) {
-      console.log(`🧹 Cleared ${cleared} stale coalesced requests`);
+      logger.debug({ cleared }, "Cleared stale coalesced requests");
     }
 
     return cleared;
@@ -182,6 +184,6 @@ if (process.env.NODE_ENV === 'production') {
       metadata: tokenMetadataCoalescer.getStats()
     };
 
-    console.log('📊 Request Coalescing Stats:', JSON.stringify(stats, null, 2));
+    logger.info({ stats }, "Request coalescing stats");
   }, 5 * 60 * 1000); // Every 5 minutes
 }

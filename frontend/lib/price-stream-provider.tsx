@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { env } from './env'
+import { errorLogger } from './error-logger'
 
 export enum ConnectionState {
   Disconnected = 'DISCONNECTED',
@@ -86,7 +87,7 @@ function usePriceStream(options: {
   const HEARTBEAT_INTERVAL = 25000 // 25 seconds heartbeat
   
   const cleanup = useCallback(() => {
-    console.log('🧹 Cleaning up WebSocket connection')
+    errorLogger.info('Cleaning up WebSocket connection', { component: 'PriceStream' })
     
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
@@ -121,7 +122,7 @@ function usePriceStream(options: {
   }, [])
   
   const updateConnectionState = useCallback((state: ConnectionState) => {
-    console.log(`🔄 Connection state: ${connectionState} → ${state}`)
+    errorLogger.debug(`Connection state: ${connectionState} -> ${state}`, { component: 'PriceStream' })
     setConnectionState(state)
     setConnected(state === ConnectionState.Connected)
     setConnecting(state === ConnectionState.Connecting || state === ConnectionState.Reconnecting)
@@ -137,29 +138,23 @@ function usePriceStream(options: {
         try {
           // Send ping message to keep connection alive
           wsRef.current.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }))
-          console.log('💓 Heartbeat sent')
         } catch (err) {
-          console.error('❌ Failed to send heartbeat:', err)
+          errorLogger.error('Failed to send heartbeat', { error: err as Error, component: 'PriceStream' })
         }
       }
     }, HEARTBEAT_INTERVAL)
   }, [])
   
   const connect = useCallback(async () => {
-    // DEBUG: Connection attempt logging
-    console.log('🔍 [DEBUG] Connect function called:', {
-      enabled: options.enabled,
-      connectionState,
-      isManuallyClosedRef: isManuallyClosedRef.current,
-      wsRef: wsRef.current?.readyState,
-      timeNow: Date.now(),
-      NEXT_PUBLIC_WS_URL: env.NEXT_PUBLIC_WS_URL
+    errorLogger.debug('Connect function called', {
+      metadata: { enabled: options.enabled, connectionState, attempt: reconnectAttemptsRef.current },
+      component: 'PriceStream'
     })
     
     // Rate limiting - prevent rapid connection attempts
     const now = Date.now()
     if (now - lastConnectAttemptRef.current < RATE_LIMIT_DELAY) {
-      console.log('🚫 Connection attempt rate limited')
+      errorLogger.debug('Connection attempt rate limited', { component: 'PriceStream' })
       return
     }
     lastConnectAttemptRef.current = now
@@ -183,7 +178,7 @@ function usePriceStream(options: {
     if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
       setError(`WebSocket server appears to be rejecting connections (${MAX_CONSECUTIVE_FAILURES} consecutive immediate failures)`)
       updateConnectionState(ConnectionState.Failed)
-      console.error('🛑 Stopping reconnection attempts due to consecutive immediate failures')
+      errorLogger.error('Stopping reconnection attempts due to consecutive immediate failures', { component: 'PriceStream' })
       return
     }
     
@@ -192,10 +187,9 @@ function usePriceStream(options: {
       setError(null)
       
       const attemptNum = reconnectAttemptsRef.current + 1
-      console.log(`🔌 ${attemptNum > 1 ? 'Reconnecting' : 'Connecting'} to WebSocket (attempt ${attemptNum}/${options.maxReconnectAttempts})`)
-      // URL logging disabled in production for security
+      errorLogger.info(`${attemptNum > 1 ? 'Reconnecting' : 'Connecting'} to WebSocket (attempt ${attemptNum}/${options.maxReconnectAttempts})`, { component: 'PriceStream' })
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔗 Target URL: ${env.NEXT_PUBLIC_WS_URL}`)
+        console.log(`Target URL: ${env.NEXT_PUBLIC_WS_URL}`)
       }
       
       connectionStartTimeRef.current = Date.now()
@@ -213,19 +207,19 @@ function usePriceStream(options: {
         ws = new WebSocket(env.NEXT_PUBLIC_WS_URL, ['websocket'])
         wsRef.current = ws
         
-        console.log(`🔍 WebSocket created, readyState: ${ws.readyState} (CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3)`)
+        errorLogger.debug(`WebSocket created, readyState: ${ws.readyState}`, { component: 'PriceStream' })
         
         // Small delay before setting up event listeners
         await new Promise(resolve => setTimeout(resolve, 50))
       } catch (createError) {
-        console.error('❌ Failed to create WebSocket:', createError)
+        errorLogger.error('Failed to create WebSocket', { error: createError as Error, component: 'PriceStream' })
         throw createError
       }
       
       // Set connection timeout with generous time for Railway
       connectionTimeoutRef.current = setTimeout(() => {
         if (ws.readyState === WebSocket.CONNECTING) {
-          console.error('⏰ WebSocket connection timeout after 15 seconds')
+          errorLogger.error('WebSocket connection timeout after 15 seconds', { component: 'PriceStream' })
           ws.close()
           setError('Connection timeout - server may be unreachable')
           updateConnectionState(ConnectionState.Disconnected)
@@ -257,7 +251,7 @@ function usePriceStream(options: {
         try {
           ws.send(JSON.stringify({ type: 'subscribe', mint: SOL_MINT }))
         } catch (err) {
-          console.error('Failed to subscribe to SOL:', err)
+          errorLogger.error('Failed to subscribe to SOL', { error: err as Error, component: 'PriceStream' })
         }
 
         // Resubscribe to all tokens with delay to avoid overwhelming the server
@@ -270,7 +264,7 @@ function usePriceStream(options: {
                   ws.send(JSON.stringify({ type: 'subscribe', mint: address }))
                 }
               } catch (err) {
-                console.error('Failed to resubscribe:', err)
+                errorLogger.error('Failed to resubscribe', { error: err as Error, component: 'PriceStream' })
               }
             }, index * 100) // Stagger subscriptions by 100ms each
           })
@@ -294,12 +288,12 @@ function usePriceStream(options: {
           }
           // Silently handle pong and hello messages
         } catch (err) {
-          console.error('Failed to parse WebSocket message:', err)
+          errorLogger.error('Failed to parse WebSocket message', { error: err as Error, component: 'PriceStream' })
         }
       }
       
       ws.onerror = (event) => {
-        console.error('❌ WebSocket error:', event)
+        errorLogger.error('WebSocket error event', { component: 'PriceStream' })
         
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current)
@@ -311,8 +305,10 @@ function usePriceStream(options: {
       }
       
       ws.onclose = (event) => {
-        console.log(`❌ WebSocket closed: ${event.wasClean ? 'clean' : 'unclean'} (${event.code}) - ${event.reason || 'No reason provided'}`)
-        console.log(`🔍 Close code description: ${getCloseCodeDescription(event.code)}`)
+        errorLogger.info(`WebSocket closed: ${event.wasClean ? 'clean' : 'unclean'} (${event.code}) - ${getCloseCodeDescription(event.code)}`, {
+          metadata: { code: event.code, reason: event.reason, wasClean: event.wasClean },
+          component: 'PriceStream'
+        })
         
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current)
@@ -325,12 +321,11 @@ function usePriceStream(options: {
         }
         
         const connectionDuration = Date.now() - connectionStartTimeRef.current
-        console.log(`⏱️ Connection duration: ${connectionDuration}ms`)
+        errorLogger.debug(`Connection duration: ${connectionDuration}ms`, { component: 'PriceStream' })
         
         // Enhanced logging for immediate failures
         if (connectionDuration < IMMEDIATE_FAILURE_THRESHOLD) {
-          console.error(`🚨 Immediate failure detected (${connectionDuration}ms < ${IMMEDIATE_FAILURE_THRESHOLD}ms)`)
-          console.error(`🔍 This suggests server rejection or proxy/CDN issues`)
+          errorLogger.error(`Immediate failure detected (${connectionDuration}ms < ${IMMEDIATE_FAILURE_THRESHOLD}ms) - suggests server rejection or proxy/CDN issues`, { component: 'PriceStream' })
           consecutiveFailuresRef.current++
         } else {
           consecutiveFailuresRef.current = 0
@@ -343,20 +338,20 @@ function usePriceStream(options: {
         if (!isManuallyClosedRef.current && options.autoReconnect) {
           // Normal closures - don't reconnect
           if (event.code === 1000 || event.code === 1001) {
-            console.log('🚫 Not reconnecting due to normal closure')
+            errorLogger.debug('Not reconnecting due to normal closure', { component: 'PriceStream' })
             return
           }
           
           // Server errors that might be temporary
           if (event.code === 1011 || event.code === 1012 || event.code === 1013) {
-            console.log('� Server error - will attempt reconnection')
+            errorLogger.info('Server error - will attempt reconnection', { component: 'PriceStream' })
           }
           
           // Stop reconnecting if too many consecutive immediate failures
           if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
             setError(`Server appears to be rejecting connections (${MAX_CONSECUTIVE_FAILURES} consecutive immediate failures). Please check your network or try again later.`)
             updateConnectionState(ConnectionState.Failed)
-            console.error('🛑 Stopping reconnection attempts - server rejection pattern detected')
+            errorLogger.error('Stopping reconnection attempts - server rejection pattern detected', { component: 'PriceStream' })
             return
           }
           
@@ -369,7 +364,7 @@ function usePriceStream(options: {
         }
       }
     } catch (err) {
-      console.error('❌ Failed to create WebSocket:', err)
+      errorLogger.error('Failed to create WebSocket', { error: err as Error, component: 'PriceStream' })
       setError(err instanceof Error ? err.message : 'Failed to create WebSocket connection')
       updateConnectionState(ConnectionState.Disconnected)
       consecutiveFailuresRef.current++

@@ -6,9 +6,10 @@
  */
 
 import prisma from "../plugins/prisma.js";
+import logger from "../utils/logger.js";
 
 async function cleanupActivitiesWithoutImages() {
-  console.log("🧹 Starting cleanup of wallet activities without images...\n");
+  logger.info("Starting cleanup of wallet activities without images");
 
   try {
     // Find activities without images
@@ -41,22 +42,21 @@ async function cleanupActivitiesWithoutImages() {
       },
     });
 
-    console.log(`Found ${activitiesWithoutImages.length} activities without images`);
+    logger.info({ count: activitiesWithoutImages.length }, "Found activities without images");
 
     if (activitiesWithoutImages.length === 0) {
-      console.log("✅ No cleanup needed - all activities have images!");
+      logger.info("No cleanup needed - all activities have images");
       return;
     }
 
     // Show sample of what will be deleted
-    console.log("\nSample of activities to be deleted:");
+    logger.info("Sample of activities to be deleted:");
     activitiesWithoutImages.slice(0, 5).forEach((activity) => {
-      console.log(`  - ${activity.type} | ${activity.signature.slice(0, 8)}... | ${activity.timestamp}`);
+      logger.info({ type: activity.type, signature: activity.signature.slice(0, 8), timestamp: activity.timestamp }, "Activity to delete");
     });
 
     // Confirm deletion
-    console.log(`\n⚠️  This will DELETE ${activitiesWithoutImages.length} activities from the database.`);
-    console.log("Press Ctrl+C to cancel, or wait 5 seconds to proceed...\n");
+    logger.warn({ count: activitiesWithoutImages.length }, "This will DELETE activities from the database. Press Ctrl+C to cancel, waiting 5 seconds...");
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
@@ -83,10 +83,10 @@ async function cleanupActivitiesWithoutImages() {
       },
     });
 
-    console.log(`✅ Successfully deleted ${result.count} activities without images`);
-    console.log("\n🎉 Cleanup complete! Your wallet tracker will now only show activities with images.");
+    logger.info({ deletedCount: result.count }, "Successfully deleted activities without images");
+    logger.info("Cleanup complete. Wallet tracker will now only show activities with images.");
   } catch (error) {
-    console.error("❌ Error during cleanup:", error);
+    logger.error({ err: error }, "Error during cleanup");
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -97,6 +97,6 @@ async function cleanupActivitiesWithoutImages() {
 cleanupActivitiesWithoutImages()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    logger.error({ err: error }, "Cleanup script failed");
     process.exit(1);
   });

@@ -1,4 +1,5 @@
-import { WSFrame, type PriceTick } from "../src/types/contracts";
+import { WSFrame, type PriceTick } from "./types/contracts";
+import { errorLogger } from './error-logger';
 
 // Use the proper contract types from our contracts file
 type CloseFn = () => void;
@@ -21,25 +22,23 @@ export function connectPrices(onTick: (t: PriceTick) => void, url: string): Clos
   const open = () => {
     if (closed) return;
     
-    // Production-safe logging - don't expose URL
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🔌 Connecting to ${url} (attempt ${tries + 1})`);
+      console.log(`Connecting to ${url} (attempt ${tries + 1})`);
     } else {
-      console.log(`🔌 Connecting to WebSocket (attempt ${tries + 1})`);
+      errorLogger.info('Connecting to WebSocket', { metadata: { attempt: tries + 1 }, component: 'ws' });
     }
     ws = new WebSocket(url);
     
     ws.onopen = () => {
-      console.log('✅ WebSocket connected');
+      errorLogger.info('WebSocket connected', { component: 'ws' });
       tries = 0;
       
       // Start heartbeat to prevent proxy timeouts
       heartbeat = setInterval(() => {
         if (ws?.readyState === WebSocket.OPEN) {
           ws.send('{"t":"pong"}');
-          // Heartbeat logging disabled in production for security
           if (process.env.NODE_ENV === 'development') {
-            console.log('💓 Heartbeat sent');
+            console.log('Heartbeat sent');
           }
         }
       }, 25000); // 25s is safe for most proxies including Railway
@@ -62,7 +61,7 @@ export function connectPrices(onTick: (t: PriceTick) => void, url: string): Clos
             const frame = WSFrame.parse(msg);
             onTick(frame.d);
           } catch (parseError) {
-            console.error("❌ Price tick validation failed:", parseError, msg);
+            errorLogger.error('Price tick validation failed', { error: parseError as Error, metadata: { msg }, component: 'ws' });
           }
         }
         // Legacy format support (remove after migration)
@@ -78,13 +77,13 @@ export function connectPrices(onTick: (t: PriceTick) => void, url: string): Clos
             
             onTick(data);
           } catch (parseError) {
-            console.error("❌ Legacy price tick validation failed:", parseError, msg);
+            errorLogger.error('Legacy price tick validation failed', { error: parseError as Error, component: 'ws' });
           }
         }
         
         // Handle other message types (hello, pong, etc.) silently
       } catch (jsonError) {
-        console.error("❌ WS frame parse error:", jsonError);
+        errorLogger.error('WS frame parse error', { error: jsonError as Error, component: 'ws' });
       }
     };
 
@@ -101,19 +100,19 @@ export function connectPrices(onTick: (t: PriceTick) => void, url: string): Clos
       const jitter = Math.random() * 1000; // Add randomness to prevent thundering herd
       const delay = baseDelay + jitter;
       
-      console.log(`🔄 Reconnecting in ${Math.round(delay / 1000)}s...`);
+      errorLogger.info('Reconnecting WebSocket', { metadata: { delaySec: Math.round(delay / 1000) }, component: 'ws' });
       setTimeout(open, delay);
     };
 
     ws.onclose = (event) => {
       if (closed) return;
-      console.log(`🔌 WebSocket closed: ${event.code} ${event.reason}`);
+      errorLogger.info('WebSocket closed', { metadata: { code: event.code, reason: event.reason }, component: 'ws' });
       reopen();
     };
     
-    ws.onerror = (error) => {
+    ws.onerror = (event) => {
       if (closed) return;
-      console.error("❌ WebSocket error:", error);
+      errorLogger.error('WebSocket error', { metadata: { type: event.type }, component: 'ws' });
       reopen();
     };
   };
@@ -121,7 +120,7 @@ export function connectPrices(onTick: (t: PriceTick) => void, url: string): Clos
   open();
   
   return () => { 
-    console.log('🧹 Closing WebSocket connection');
+    errorLogger.info('Closing WebSocket connection', { component: 'ws' });
     closed = true;
     if (heartbeat) clearInterval(heartbeat); 
     ws?.close(); 

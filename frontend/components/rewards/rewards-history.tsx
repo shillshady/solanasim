@@ -31,6 +31,7 @@ import * as Backend from "@/lib/types/backend"
 import { useAuth } from "@/hooks/use-auth"
 import { formatNumber, formatUSD } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { AuthCTA } from "@/components/auth/auth-cta"
 
 type FilterStatus = "all" | "pending" | "completed" | "failed"
 
@@ -140,17 +141,12 @@ export function RewardsHistory() {
 
   if (!user) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <History className="h-12 w-12 text-muted-foreground mx-auto" />
-            <div>
-              <h3 className="text-lg font-semibold">Sign In Required</h3>
-              <p className="text-sm text-muted-foreground">Connect your account to view reward history</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AuthCTA
+        variant="card"
+        message="Sign in to view reward history"
+        description="Track your claimed rewards, pending earnings, and transaction history."
+        icon={<History className="h-6 w-6" />}
+      />
     )
   }
 

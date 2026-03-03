@@ -193,17 +193,12 @@ export function RewardsOverview() {
 
   if (!isAuthenticated || !user) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <Gift className="h-12 w-12 text-muted-foreground mx-auto" />
-            <div>
-              <h3 className="text-lg font-semibold">Sign In to View Rewards</h3>
-              <p className="text-sm text-muted-foreground">Connect your account to start earning $SIM tokens</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AuthCTA
+        variant="card"
+        message="Sign in to view your rewards"
+        description="Connect your account to start earning and claiming $SIM tokens."
+        icon={<Gift className="h-6 w-6" />}
+      />
     )
   }
 

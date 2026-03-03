@@ -2,6 +2,8 @@
 import { robustFetch } from "../utils/fetch.js";
 import redis from "../plugins/redis.js";
 import { safeStringify, safeParse } from "../utils/json.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.stocks;
 
 export interface StockToken {
   mint: string;
@@ -83,15 +85,15 @@ export async function getStockTokens(limit: number = 50): Promise<StockToken[]> 
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`[STOCKS CACHE HIT] Returning cached stock tokens`);
+      logger.debug("Returning cached stock tokens");
       return safeParse(cached);
     }
   } catch (error) {
-    console.warn('Redis cache read failed for stocks:', error);
+    logger.warn({ err: error }, "Redis cache read failed for stocks");
   }
 
   try {
-    console.log(`Fetching tokenized stocks with limit: ${limit}`);
+    logger.info({ limit }, "Fetching tokenized stocks");
 
     // Fetch all xStocks tokens using their mint addresses
     const tokensToFetch = XSTOCKS_TOKENS.slice(0, limit);
@@ -108,7 +110,7 @@ export async function getStockTokens(limit: number = 50): Promise<StockToken[]> 
       .map(result => result.value)
       .filter((stock): stock is StockToken => stock !== null);
 
-    console.log(`Found ${stocks.length} tokenized stocks`);
+    logger.info({ count: stocks.length }, "Found tokenized stocks");
 
     // Sort by volume descending
     stocks.sort((a, b) => b.volume24h - a.volume24h);
@@ -117,13 +119,13 @@ export async function getStockTokens(limit: number = 50): Promise<StockToken[]> 
     try {
       await redis.setex(cacheKey, 600, safeStringify(stocks));
     } catch (error) {
-      console.warn('Failed to cache stock tokens:', error);
+      logger.warn({ err: error }, "Failed to cache stock tokens");
     }
 
     return stocks;
 
   } catch (error) {
-    console.error('Error fetching stock tokens:', error);
+    logger.error({ err: error }, "Error fetching stock tokens");
     return [];
   }
 }
@@ -185,7 +187,7 @@ async function fetchTokenByMint(mint: string, symbol: string, name: string, imag
     };
 
   } catch (error) {
-    console.error(`Error fetching token ${symbol} (${mint}):`, error);
+    logger.error({ symbol, mint, err: error }, "Error fetching token");
     return null;
   }
 }

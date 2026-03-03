@@ -1,11 +1,12 @@
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import logger from '../utils/logger.js';
 
 export function initSentry() {
   const SENTRY_DSN = process.env.SENTRY_DSN;
 
   if (!SENTRY_DSN) {
-    console.log('Sentry DSN not found, skipping Sentry initialization');
+    logger.info('Sentry DSN not found, skipping Sentry initialization');
     return;
   }
 
@@ -38,7 +39,7 @@ export function initSentry() {
     },
   });
 
-  console.log('✅ Sentry initialized successfully');
+  logger.info('Sentry initialized successfully');
 }
 
 // Error handler middleware for Fastify
@@ -64,16 +65,16 @@ export function sentryErrorHandler(error: Error, request: any, reply: any) {
 export function testSentryConnection() {
   try {
     Sentry.captureMessage('Sentry test message from Solana Sim backend', 'info');
-    console.log('📤 Test message sent to Sentry');
+    logger.info('Test message sent to Sentry');
 
     // Also test error capture
     const testError = new Error('Test error from Solana Sim backend initialization');
     Sentry.captureException(testError);
-    console.log('📤 Test error sent to Sentry');
+    logger.info('Test error sent to Sentry');
 
     return true;
   } catch (error) {
-    console.error('Failed to test Sentry:', error);
+    logger.error({ err: error }, 'Failed to test Sentry');
     return false;
   }
 }

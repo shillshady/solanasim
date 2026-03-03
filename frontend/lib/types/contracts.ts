@@ -29,6 +29,12 @@ export const TradeFillV1 = z.object({
   ts: z.number().int().positive()
 });
 
+export const WSFrame = z.object({
+  t: z.literal("price"),
+  d: PriceTickV1
+});
+
 export type PriceTick = z.infer<typeof PriceTickV1>;
 export type BalanceUpdate = z.infer<typeof BalanceUpdateV1>;
 export type TradeFill = z.infer<typeof TradeFillV1>;
+export type WSFrameType = z.infer<typeof WSFrame>;

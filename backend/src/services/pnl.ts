@@ -14,6 +14,9 @@
  * - Prices: lamports per base unit
  */
 
+import { loggers } from "../utils/logger.js";
+const logger = loggers.trade;
+
 export type Fill = {
   side: "BUY" | "SELL";
   qtyBaseUnits: string;     // integer string in token's base units
@@ -72,7 +75,7 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
 
   const currentSolUsdBigInt = BigInt(Math.round(parseFloat(currentSolUsd) * 1_000_000)); // 6 decimal precision for USD
 
-  console.log(`🧮 Computing PnL for ${sortedFills.length} fills with mark price ${markPriceLamports} and SOL/USD rate ${currentSolUsd}`);
+  logger.info({ fillCount: sortedFills.length, markPriceLamports, currentSolUsd }, "Computing PnL");
 
   for (const fill of sortedFills) {
     try {
@@ -81,7 +84,7 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
       const fee = BigInt(fill.feeLamports);
       const solUsdAtFill = BigInt(Math.round(parseFloat(fill.solUsdAtFill) * 1_000_000));
 
-      console.log(`  Processing ${fill.side} ${qty} @ ${price} (fee: ${fee}, SOL/USD: ${solUsdAtFill})`);
+      logger.debug({ side: fill.side, qty: qty.toString(), price: price.toString(), fee: fee.toString(), solUsdAtFill: solUsdAtFill.toString() }, "Processing fill");
 
       if (fill.side === "BUY") {
         // Add new lot: cost = quantity × price + allocated fee
@@ -95,7 +98,7 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
           solUsdAtBuy: solUsdAtFill
         });
 
-        console.log(`    Added lot: qty=${qty}, cost=${totalCostLamports} lamports, ${totalCostUsd} USD`);
+        logger.debug({ qty: qty.toString(), costLamports: totalCostLamports.toString(), costUsd: totalCostUsd.toString() }, "Added lot");
 
       } else { // SELL
         let remainingToSell = qty;
@@ -132,10 +135,15 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
           realizedLamports += realizedForThisPortionLamports;
           realizedUsd += realizedForThisPortionUsd;
 
-          console.log(`    Closed portion: ${takeFromLot} units`);
-          console.log(`      Cost basis: ${proportionalCostLamports} lamports, ${proportionalCostUsd} USD`);
-          console.log(`      Net proceeds: ${netProceeds} lamports, ${netProceedsUsd} USD`);
-          console.log(`      Realized PnL: ${realizedForThisPortionLamports} lamports, ${realizedForThisPortionUsd} USD`);
+          logger.debug({
+            closedUnits: takeFromLot.toString(),
+            costBasisLamports: proportionalCostLamports.toString(),
+            costBasisUsd: proportionalCostUsd.toString(),
+            netProceedsLamports: netProceeds.toString(),
+            netProceedsUsd: netProceedsUsd.toString(),
+            realizedPnlLamports: realizedForThisPortionLamports.toString(),
+            realizedPnlUsd: realizedForThisPortionUsd.toString(),
+          }, "Closed portion");
 
           // Update lot
           lot.qty -= takeFromLot;
@@ -145,7 +153,7 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
           // Remove lot if fully consumed
           if (lot.qty === 0n) {
             openLots.shift();
-            console.log(`    Lot fully closed`);
+            logger.debug("Lot fully closed");
           }
 
           remainingToSell -= takeFromLot;
@@ -154,13 +162,13 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
         // If we still have quantity to sell but no lots, that's a short position
         // For now, we'll treat this as an error, but could support shorts later
         if (remainingToSell > 0n) {
-          console.warn(`⚠️ Attempted to sell ${remainingToSell} more than position allows`);
+          logger.warn({ remainingToSell: remainingToSell.toString() }, "Attempted to sell more than position allows");
           // Could throw error or handle as short position
         }
       }
 
     } catch (error) {
-      console.error(`❌ Error processing fill:`, fill, error);
+      logger.error({ fill, err: error }, "Error processing fill");
       throw new Error(`Failed to process fill: ${error}`);
     }
   }
@@ -190,18 +198,30 @@ export function computePnL(fills: Fill[], markPriceLamports: string, currentSolU
     totalCostBasis += lot.costLamports;
     totalCostBasisUsd += lot.costUsd;
 
-    console.log(`  Open lot: ${lot.qty} units, cost ${lot.costLamports} lamports/${lot.costUsd} USD, mark value ${markValueLamports} lamports/${markValueUsd} USD, unrealized ${unrealizedForLotLamports} lamports/${unrealizedForLotUsd} USD`);
+    logger.debug({
+      qty: lot.qty.toString(),
+      costLamports: lot.costLamports.toString(),
+      costUsd: lot.costUsd.toString(),
+      markValueLamports: markValueLamports.toString(),
+      markValueUsd: markValueUsd.toString(),
+      unrealizedLamports: unrealizedForLotLamports.toString(),
+      unrealizedUsd: unrealizedForLotUsd.toString(),
+    }, "Open lot");
   }
 
   // Calculate average cost per unit (avoid division by zero)
   const averageCostLamports = totalOpenQty > 0n ? totalCostBasis / totalOpenQty : 0n;
   const averageCostUsd = totalOpenQty > 0n ? totalCostBasisUsd / totalOpenQty : 0n;
 
-  console.log(`✅ PnL computation complete:`);
-  console.log(`  Realized: ${realizedLamports} lamports, ${realizedUsd} USD`);
-  console.log(`  Unrealized: ${unrealizedLamports} lamports, ${unrealizedUsd} USD`);
-  console.log(`  Open quantity: ${totalOpenQty} base units`);
-  console.log(`  Average cost: ${averageCostLamports} lamports/${averageCostUsd} USD per unit`);
+  logger.info({
+    realizedLamports: realizedLamports.toString(),
+    realizedUsd: realizedUsd.toString(),
+    unrealizedLamports: unrealizedLamports.toString(),
+    unrealizedUsd: unrealizedUsd.toString(),
+    openQuantity: totalOpenQty.toString(),
+    averageCostLamports: averageCostLamports.toString(),
+    averageCostUsd: averageCostUsd.toString(),
+  }, "PnL computation complete");
 
   return {
     realizedLamports: realizedLamports.toString(),

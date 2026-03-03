@@ -2,6 +2,7 @@
  * Utility to fix timezone issues with TradingView and other chart components
  * Addresses the "unsupported timezone" warnings
  */
+import { errorLogger } from './error-logger'
 
 /**
  * Maps unsupported timezone strings to supported ones
@@ -33,7 +34,7 @@ export function getSupportedTimezone(timezone?: string): string {
       return timezone
     }
   } catch (err) {
-    console.warn('Intl.supportedValuesOf not available, using fallback')
+    errorLogger.warn('Intl.supportedValuesOf not available, using fallback', { component: 'chart-utils' })
   }
 
   // Use mapping for known unsupported timezones
@@ -42,7 +43,7 @@ export function getSupportedTimezone(timezone?: string): string {
   }
 
   // Default fallback
-  console.warn(`Unsupported timezone "${timezone}", falling back to UTC`)
+  errorLogger.warn(`Unsupported timezone "${timezone}", falling back to UTC`, { component: 'chart-utils' })
   return 'Etc/UTC'
 }
 
@@ -54,7 +55,7 @@ export function getUserTimezone(): string {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     return getSupportedTimezone(userTimezone)
   } catch (err) {
-    console.warn('Failed to get user timezone, falling back to UTC')
+    errorLogger.warn('Failed to get user timezone, falling back to UTC', { component: 'chart-utils' })
     return 'Etc/UTC'
   }
 }

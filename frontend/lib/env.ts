@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errorLogger } from './error-logger';
 
 /**
  * Environment Variable Schema
@@ -58,7 +59,7 @@ const parseEnv = () => {
       NODE_ENV: process.env.NODE_ENV,
     });
   } catch (error) {
-    console.error("❌ Environment validation failed - wrong URLs/keys will fail fast:", error);
+    errorLogger.critical('Environment validation failed - wrong URLs/keys will fail fast', { error: error as Error, component: 'env' });
     throw new Error(
       `Environment validation failed. Please check your .env.local file.\n${
         error instanceof z.ZodError

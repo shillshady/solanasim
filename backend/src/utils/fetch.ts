@@ -1,4 +1,5 @@
 import fetch, { RequestInfo, RequestInit, Response } from 'node-fetch';
+import logger from '../utils/logger.js';
 
 export interface FetchOptions extends RequestInit {
   timeout?: number;
@@ -44,8 +45,9 @@ export async function robustFetch(
       // Check if we should retry based on status code
       if (attempt < retries && retryOn.includes(response.status)) {
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
-        console.warn(
-          `Fetch ${url} returned ${response.status}, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`
+        logger.warn(
+          { url, status: response.status, delay, attempt: attempt + 1, maxRetries: retries },
+          "Fetch returned retryable status, retrying"
         );
         await sleep(delay);
         continue;
@@ -69,8 +71,9 @@ export async function robustFetch(
         const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
         // Don't log DNS errors (ENOTFOUND) since they're expected and we have fallbacks
         if (error.code !== 'ENOTFOUND') {
-          console.warn(
-            `Fetch ${url} failed with ${error.code || error.name}, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`
+          logger.warn(
+            { url, errorCode: error.code || error.name, delay, attempt: attempt + 1, maxRetries: retries },
+            "Fetch failed with network error, retrying"
           );
         }
         await sleep(delay);

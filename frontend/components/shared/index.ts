@@ -27,8 +27,6 @@ export {
   NotificationProvider,
   ErrorBoundaryNotification
 } from "./enhanced-notifications"
-export * from "./types"
-
 // New standardized formatting components
 export {
   MoneyCell,

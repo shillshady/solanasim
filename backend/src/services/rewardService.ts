@@ -4,6 +4,8 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import bs58 from "bs58";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.rewards;
 
 // Initialize reward system configuration from environment variables
 let SIM_MINT: PublicKey | null = null;
@@ -13,27 +15,27 @@ let REWARDS_WALLET: Keypair | null = null;
 try {
   if (process.env.VSOL_TOKEN_MINT) {
     SIM_MINT = new PublicKey(process.env.VSOL_TOKEN_MINT);
-    console.log('✅ VSOL Token Mint configured:', SIM_MINT.toBase58());
+    logger.info({ mint: SIM_MINT.toBase58() }, "VSOL Token Mint configured");
   } else {
-    console.warn('⚠️  VSOL_TOKEN_MINT not configured - reward claiming disabled');
+    logger.warn("VSOL_TOKEN_MINT not configured - reward claiming disabled");
   }
 
   if (process.env.REWARDS_WALLET_SECRET) {
     const secretKeyArray = JSON.parse(process.env.REWARDS_WALLET_SECRET);
     REWARDS_WALLET = Keypair.fromSecretKey(Uint8Array.from(secretKeyArray));
-    console.log('✅ Rewards Wallet configured:', REWARDS_WALLET.publicKey.toBase58());
+    logger.info({ wallet: REWARDS_WALLET.publicKey.toBase58() }, "Rewards Wallet configured");
   } else {
-    console.warn('⚠️  REWARDS_WALLET_SECRET not configured - reward claiming disabled');
+    logger.warn("REWARDS_WALLET_SECRET not configured - reward claiming disabled");
   }
 
   // Validate both are set together
   if ((SIM_MINT && !REWARDS_WALLET) || (!SIM_MINT && REWARDS_WALLET)) {
-    console.error('❌ Both VSOL_TOKEN_MINT and REWARDS_WALLET_SECRET must be configured together');
+    logger.error("Both VSOL_TOKEN_MINT and REWARDS_WALLET_SECRET must be configured together");
     SIM_MINT = null;
     REWARDS_WALLET = null;
   }
 } catch (error) {
-  console.error('❌ Failed to initialize reward system:', error);
+  logger.error({ err: error }, "Failed to initialize reward system");
   SIM_MINT = null;
   REWARDS_WALLET = null;
 }
@@ -60,14 +62,14 @@ export async function snapshotRewards(epoch: number, poolAmount: Decimal) {
     const users = await prisma.user.findMany({ where: { rewardPoints: { gt: 0 } } });
     
     if (users.length === 0) {
-      console.log(`📊 No users with reward points for epoch ${epoch}`);
+      logger.info({ epoch }, "No users with reward points for epoch");
       return;
     }
     
     const totalPoints = users.reduce((sum: Decimal, u: any) => sum.add(u.rewardPoints as any), new Decimal(0));
     
     if (totalPoints.eq(0)) {
-      console.log(`📊 Total points is 0 for epoch ${epoch}`);
+      logger.info({ epoch }, "Total points is 0 for epoch");
       return;
     }
 
@@ -76,7 +78,7 @@ export async function snapshotRewards(epoch: number, poolAmount: Decimal) {
       data: { epoch, totalPoints, poolAmount }
     });
 
-    console.log(`📊 Created snapshot for epoch ${epoch}: ${users.length} users, ${totalPoints} points, ${poolAmount} VSOL pool`);
+    logger.info({ epoch, userCount: users.length, totalPoints: totalPoints.toString(), poolAmount: poolAmount.toString() }, "Created reward snapshot");
 
     // Record claim entitlements in batch
     const claimData = [];
@@ -100,7 +102,7 @@ export async function snapshotRewards(epoch: number, poolAmount: Decimal) {
       await prisma.rewardClaim.createMany({
         data: claimData
       });
-      console.log(`📊 Created ${claimData.length} reward claims`);
+      logger.info({ claimCount: claimData.length }, "Created reward claims");
     }
     
     // Reset points for next round (batch update)
@@ -109,10 +111,10 @@ export async function snapshotRewards(epoch: number, poolAmount: Decimal) {
       data: { rewardPoints: new Decimal(0) }
     });
     
-    console.log(`📊 Reset reward points for ${users.length} users`);
+    logger.info({ userCount: users.length }, "Reset reward points");
     
   } catch (error) {
-    console.error(`❌ Snapshot failed for epoch ${epoch}:`, error);
+    logger.error({ epoch, err: error }, "Snapshot failed");
     throw error;
   }
 }
@@ -189,7 +191,7 @@ export async function claimReward(userId: string, epoch: number, wallet: string)
       }
     });
 
-    console.log(`✅ Reward claimed: ${claim.amount} VSOL to ${wallet} (${sig})`);
+    logger.info({ amount: claim.amount.toString(), wallet, txSig: sig }, "Reward claimed");
     return { sig, amount: claim.amount };
     
   } catch (error: any) {
@@ -199,7 +201,7 @@ export async function claimReward(userId: string, epoch: number, wallet: string)
       data: { status: "FAILED" }
     });
     
-    console.error(`❌ Reward claim failed for ${wallet}:`, error);
+    logger.error({ wallet, err: error }, "Reward claim failed");
     throw new Error(`Reward claim failed: ${error.message}`);
   }
 }

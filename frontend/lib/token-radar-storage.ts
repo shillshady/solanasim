@@ -6,6 +6,7 @@
  */
 
 import type { AdvancedFilters } from './types/token-radar';
+import { errorLogger } from './error-logger';
 
 const STORAGE_KEYS = {
   NEW_FILTERS: 'token-radar-new-filters',
@@ -45,7 +46,7 @@ function migrateOldKeys(): void {
     // Mark migration as done
     localStorage.setItem(migrationKey, 'true');
   } catch (error) {
-    console.warn('Failed to migrate old filter keys:', error);
+    errorLogger.warn('Failed to migrate old filter keys', { error: error as Error, component: 'token-radar-storage' });
   }
 }
 
@@ -62,7 +63,7 @@ export function saveFilters(category: 'new' | 'graduating' | 'bonded', filters: 
     const key = getStorageKey(category);
     localStorage.setItem(key, JSON.stringify(filters));
   } catch (error) {
-    console.warn('Failed to save filters to localStorage:', error);
+    errorLogger.warn('Failed to save filters to localStorage', { error: error as Error, component: 'token-radar-storage' });
   }
 }
 
@@ -75,7 +76,7 @@ export function loadFilters(category: 'new' | 'graduating' | 'bonded'): Advanced
     const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : null;
   } catch (error) {
-    console.warn('Failed to load filters from localStorage:', error);
+    errorLogger.warn('Failed to load filters from localStorage', { error: error as Error, component: 'token-radar-storage' });
     return null;
   }
 }
@@ -88,7 +89,7 @@ export function clearFilters(category: 'new' | 'graduating' | 'bonded'): void {
     const key = getStorageKey(category);
     localStorage.removeItem(key);
   } catch (error) {
-    console.warn('Failed to clear filters from localStorage:', error);
+    errorLogger.warn('Failed to clear filters from localStorage', { error: error as Error, component: 'token-radar-storage' });
   }
 }
 
@@ -101,7 +102,7 @@ export function clearAllFilters(): void {
       localStorage.removeItem(key);
     });
   } catch (error) {
-    console.warn('Failed to clear all filters from localStorage:', error);
+    errorLogger.warn('Failed to clear all filters from localStorage', { error: error as Error, component: 'token-radar-storage' });
   }
 }
 
@@ -120,7 +121,7 @@ export function exportFilters(category: 'new' | 'graduating' | 'bonded'): string
       version: '1.0',
     }, null, 2);
   } catch (error) {
-    console.warn('Failed to export filters:', error);
+    errorLogger.warn('Failed to export filters', { error: error as Error, component: 'token-radar-storage' });
     return null;
   }
 }
@@ -147,7 +148,7 @@ export function importFilters(jsonString: string): { category: string; filters: 
       filters: data.filters as AdvancedFilters,
     };
   } catch (error) {
-    console.warn('Failed to import filters:', error);
+    errorLogger.warn('Failed to import filters', { error: error as Error, component: 'token-radar-storage' });
     return null;
   }
 }
@@ -198,7 +199,7 @@ export function getStorageInfo(): { used: number; available: boolean } {
         }
       });
     } catch (error) {
-      console.warn('Failed to calculate storage usage:', error);
+      errorLogger.warn('Failed to calculate storage usage', { error: error as Error, component: 'token-radar-storage' });
     }
   }
 

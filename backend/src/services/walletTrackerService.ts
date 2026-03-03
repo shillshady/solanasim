@@ -3,6 +3,8 @@ import prisma from "../plugins/prisma.js";
 import { robustFetch } from "../utils/fetch.js";
 import { getTokenMetaBatch } from "./tokenService.js";
 import priceService from "../plugins/priceService.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.walletTracker;
 
 const HELIUS_API = process.env.HELIUS_API!;
 
@@ -170,12 +172,12 @@ async function enrichWalletTrades(trades: WalletTrade[]): Promise<void> {
   // Fetch metadata and prices in parallel - using BATCH API for metadata
   const [metadataResults, priceResults] = await Promise.all([
     getTokenMetaBatch(mints).catch(err => {
-      console.warn(`Batch metadata fetch failed:`, err);
+      logger.warn({ err }, "Batch metadata fetch failed");
       return [];
     }),
     Promise.all(mints.map(mint =>
       priceService.getPrice(mint).catch(err => {
-        console.warn(`Failed to fetch price for ${mint}:`, err);
+        logger.warn({ mint, err }, "Failed to fetch price");
         return null;
       })
     ))

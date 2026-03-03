@@ -2,6 +2,8 @@
 import prisma from "../plugins/prisma.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import priceService from "../plugins/priceService.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.trade;
 import {
   D,
   calculateInitialMargin,
@@ -162,7 +164,7 @@ export async function openPerpPosition(params: OpenPerpPositionParams) {
       return { position, trade };
     });
 
-    console.log(`[PerpTrade] Opened ${side} position: userId=${userId}, mint=${mint.substring(0, 8)}..., leverage=${leverage}x, size=${positionSize.toString()}`);
+    logger.info({ userId, mint: mint.substring(0, 8), side, leverage, positionSize: positionSize.toString() }, "Opened perp position");
 
     return {
       success: true,
@@ -277,7 +279,7 @@ export async function closePerpPosition(params: ClosePerpPositionParams) {
       return { position: updatedPosition, trade };
     });
 
-    console.log(`[PerpTrade] Closed ${position.side} position: userId=${userId}, PnL=${unrealizedPnL.toFixed(2)} USD`);
+    logger.info({ userId, side: position.side, pnlUsd: unrealizedPnL.toFixed(2) }, "Closed perp position");
 
     return {
       success: true,
@@ -317,7 +319,7 @@ export async function getUserPerpPositions(userId: string) {
     try {
       const currentPriceValue = prices[position.mint];
       if (!currentPriceValue || currentPriceValue <= 0) {
-        console.warn(`No price available for ${position.mint}, returning stale position`);
+        logger.warn({ mint: position.mint }, "No price available, returning stale position");
         return position;
       }
 
@@ -350,7 +352,7 @@ export async function getUserPerpPositions(userId: string) {
         marginRatio,
       };
     } catch (error) {
-      console.error(`Failed to update position ${position.id}:`, error);
+      logger.error({ positionId: position.id, err: error }, "Failed to update position");
       return position;
     }
   });

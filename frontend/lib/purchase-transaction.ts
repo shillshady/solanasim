@@ -1,5 +1,6 @@
 // Purchase transaction utilities for Solana
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { errorLogger } from './error-logger';
 import type { WalletContextState } from '@solana/wallet-adapter-react';
 
 // Use the same RPC endpoint as the wallet provider
@@ -128,7 +129,7 @@ export async function sendSolTransaction(
     };
 
   } catch (error: any) {
-    console.error('Transaction error:', error);
+    errorLogger.error('Transaction error', { error: error as Error, component: 'purchase-transaction' });
     
     // Handle specific error cases
     if (error.message?.includes('insufficient funds')) {
@@ -164,7 +165,7 @@ export async function getWalletSolBalance(walletAddress: string): Promise<number
     const balance = await connection.getBalance(publicKey);
     return balance / LAMPORTS_PER_SOL;
   } catch (error) {
-    console.error('Error fetching balance:', error);
+    errorLogger.error('Error fetching balance', { error: error as Error, component: 'purchase-transaction' });
     return 0;
   }
 }
@@ -192,7 +193,7 @@ export async function estimateTransactionFee(): Promise<number> {
     const fee = await connection.getFeeForMessage(testTransaction.compileMessage(), 'confirmed');
     return (fee.value || 5000) / LAMPORTS_PER_SOL;
   } catch (error) {
-    console.error('Error estimating fee:', error);
+    errorLogger.error('Error estimating fee', { error: error as Error, component: 'purchase-transaction' });
     // Return typical fee as fallback
     return 0.000005; // ~5000 lamports
   }
@@ -213,7 +214,7 @@ export async function hasSufficientBalance(
     const fee = await estimateTransactionFee();
     return balance >= (amountSOL + fee);
   } catch (error) {
-    console.error('Error checking balance:', error);
+    errorLogger.error('Error checking balance', { error: error as Error, component: 'purchase-transaction' });
     return false;
   }
 }

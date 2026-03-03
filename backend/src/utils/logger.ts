@@ -84,6 +84,12 @@ export const loggers = {
   notification: logger.child({ component: 'notification' }),
   worker: logger.child({ component: 'worker' }),
   rateLimiting: logger.child({ component: 'rate-limiting' }),
+  rewards: logger.child({ component: 'rewards' }),
+  trending: logger.child({ component: 'trending' }),
+  stocks: logger.child({ component: 'stocks' }),
+  purchase: logger.child({ component: 'purchase' }),
+  token: logger.child({ component: 'token' }),
+  walletTracker: logger.child({ component: 'wallet-tracker' }),
 };
 
 // Helper functions
