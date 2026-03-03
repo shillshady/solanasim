@@ -1,11 +1,11 @@
 import type * as Backend from '../types/backend';
-import { API } from './client';
+import { API, getAuthHeaders } from './client';
 
 export async function getPortfolio(userId: string): Promise<Backend.PortfolioResponse> {
-  const response = await fetch(`${API}/api/portfolio?userId=${encodeURIComponent(userId)}`, {
+  const response = await fetch(`${API}/api/portfolio`, {
     method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache'
     },
@@ -21,9 +21,9 @@ export async function getPortfolio(userId: string): Promise<Backend.PortfolioRes
 }
 
 export async function getPortfolioRealtime(userId: string): Promise<Backend.PortfolioResponse> {
-  const response = await fetch(`${API}/api/portfolio/realtime?userId=${encodeURIComponent(userId)}`, {
+  const response = await fetch(`${API}/api/portfolio/realtime`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -35,9 +35,9 @@ export async function getPortfolioRealtime(userId: string): Promise<Backend.Port
 }
 
 export async function getPortfolioStats(userId: string): Promise<Backend.TradingStats> {
-  const response = await fetch(`${API}/api/portfolio/stats?userId=${encodeURIComponent(userId)}`, {
+  const response = await fetch(`${API}/api/portfolio/stats`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -49,9 +49,9 @@ export async function getPortfolioStats(userId: string): Promise<Backend.Trading
 }
 
 export async function getPortfolioPerformance(userId: string, days: number = 30): Promise<Backend.PortfolioPerformanceResponse> {
-  const response = await fetch(`${API}/api/portfolio/performance?userId=${encodeURIComponent(userId)}&days=${days}`, {
+  const response = await fetch(`${API}/api/portfolio/performance?days=${days}`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
