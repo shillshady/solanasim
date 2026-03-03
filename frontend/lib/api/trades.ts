@@ -9,7 +9,7 @@ export async function getTrades(limit: number = 50, offset: number = 0): Promise
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch trades' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -23,7 +23,7 @@ export async function getUserTrades(userId: string, limit: number = 50, offset: 
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch user trades' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -37,7 +37,7 @@ export async function getTokenTrades(mint: string, limit: number = 50, offset: n
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch token trades' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -51,7 +51,7 @@ export async function getTradeStats(): Promise<Backend.TradeStats> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch trade stats' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

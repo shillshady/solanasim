@@ -10,7 +10,7 @@ export async function claimRewards(request: Backend.RewardsClaimRequest): Promis
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to claim rewards' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -24,7 +24,7 @@ export async function getUserRewardClaims(userId: string): Promise<Backend.Rewar
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch reward claims' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -39,7 +39,7 @@ export async function getRewardStats(): Promise<Backend.RewardStats> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch reward stats' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

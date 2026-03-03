@@ -9,7 +9,7 @@ export async function getTokenDetails(mint: string): Promise<Backend.Token> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch token details' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -41,7 +41,7 @@ export async function searchTokens(query: string, limit: number = 20): Promise<B
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Search failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();

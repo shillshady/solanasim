@@ -15,7 +15,7 @@ export async function openPerpPosition(request: {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to open perp position' }));
-    throw new Error(error.error || error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -33,7 +33,7 @@ export async function closePerpPosition(request: {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to close perp position' }));
-    throw new Error(error.error || error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -47,7 +47,7 @@ export async function getPerpPositions(userId: string): Promise<any> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch perp positions' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -63,7 +63,7 @@ export async function getPerpTradeHistory(userId: string, limit?: number): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch perp history' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -78,7 +78,7 @@ export async function getPerpWhitelist(): Promise<string[]> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch whitelist' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();

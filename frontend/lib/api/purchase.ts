@@ -9,7 +9,7 @@ export async function getPurchaseTiers(): Promise<Backend.PurchaseTiersResponse>
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch purchase tiers' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -26,7 +26,7 @@ export async function initiatePurchase(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to initiate purchase' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -43,7 +43,7 @@ export async function verifyPurchase(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to verify purchase' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -64,7 +64,7 @@ export async function getPurchaseHistory(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch purchase history' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

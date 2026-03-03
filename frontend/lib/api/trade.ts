@@ -9,8 +9,8 @@ export async function trade(request: Backend.TradeRequest): Promise<Backend.Trad
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Trade failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    const error = await response.json().catch(() => ({ error: 'Trade failed' }));
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

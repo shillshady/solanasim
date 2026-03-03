@@ -14,7 +14,7 @@ export async function getPortfolio(userId: string): Promise<Backend.PortfolioRes
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch portfolio' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -28,7 +28,7 @@ export async function getPortfolioRealtime(userId: string): Promise<Backend.Port
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch real-time portfolio' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -42,7 +42,7 @@ export async function getPortfolioStats(userId: string): Promise<Backend.Trading
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch portfolio stats' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -56,7 +56,7 @@ export async function getPortfolioPerformance(userId: string, days: number = 30)
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch portfolio performance' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

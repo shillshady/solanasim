@@ -10,7 +10,7 @@ export async function signupEmail(request: Backend.AuthSignupRequest): Promise<B
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Signup failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -25,7 +25,7 @@ export async function loginEmail(request: Backend.AuthLoginRequest): Promise<Bac
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Login failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -40,7 +40,7 @@ export async function getWalletNonce(request: Backend.WalletNonceRequest): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to get nonce' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -55,7 +55,7 @@ export async function verifyWallet(request: Backend.WalletVerifyRequest): Promis
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Wallet verification failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -70,7 +70,7 @@ export async function updateProfile(request: Backend.ProfileUpdateRequest): Prom
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Profile update failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -84,7 +84,7 @@ export async function getUserProfile(userId: string): Promise<Backend.User> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch user profile' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -103,7 +103,7 @@ export async function changePassword(request: {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to change password' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -121,7 +121,7 @@ export async function updateAvatar(request: {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to update avatar' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -136,7 +136,7 @@ export async function removeAvatar(userId: string): Promise<{ success: boolean; 
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to remove avatar' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

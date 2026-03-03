@@ -9,7 +9,7 @@ export async function getWalletBalance(userId: string): Promise<Backend.WalletBa
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch balance' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -30,7 +30,7 @@ export async function getWalletTransactions(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch transactions' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -44,7 +44,7 @@ export async function getWalletStats(userId: string): Promise<Backend.WalletStat
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch wallet stats' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

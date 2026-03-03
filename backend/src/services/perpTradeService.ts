@@ -17,6 +17,7 @@ import {
   calculateMaxPositionSize,
 } from "../utils/margin.js";
 import redlock from "../plugins/redlock.js";
+import redis from "../plugins/redis.js";
 import { isTokenWhitelisted } from "../config/perpWhitelist.js";
 
 interface OpenPerpPositionParams {
@@ -51,7 +52,16 @@ export async function openPerpPosition(params: OpenPerpPositionParams) {
 
   // Acquire lock to prevent concurrent position opens for same token
   const lockKey = `perp:open:${userId}:${mint}`;
-  const lock = await redlock.acquire([lockKey], 5000);
+  let lock;
+  if (redis.status === "ready") {
+    try {
+      lock = await redlock.acquire([lockKey], 5000);
+    } catch {
+      throw new Error("Position open is already in progress. Please wait and try again.");
+    }
+  } else {
+    logger.warn({ redisStatus: redis.status }, "Redis unavailable, executing perp open without lock");
+  }
 
   try {
     // Check if user already has an open position for this token
@@ -173,7 +183,9 @@ export async function openPerpPosition(params: OpenPerpPositionParams) {
       message: `Opened ${side} position with ${leverage}x leverage`,
     };
   } finally {
-    await lock.release();
+    if (lock) {
+      try { await lock.release(); } catch {}
+    }
   }
 }
 
@@ -182,7 +194,16 @@ export async function closePerpPosition(params: ClosePerpPositionParams) {
 
   // Acquire lock
   const lockKey = `perp:close:${positionId}`;
-  const lock = await redlock.acquire([lockKey], 5000);
+  let lock;
+  if (redis.status === "ready") {
+    try {
+      lock = await redlock.acquire([lockKey], 5000);
+    } catch {
+      throw new Error("Position close is already in progress. Please wait and try again.");
+    }
+  } else {
+    logger.warn({ redisStatus: redis.status }, "Redis unavailable, executing perp close without lock");
+  }
 
   try {
     // Get position
@@ -290,7 +311,9 @@ export async function closePerpPosition(params: ClosePerpPositionParams) {
       message: `Closed position with ${unrealizedPnL.gte(0) ? "profit" : "loss"}`,
     };
   } finally {
-    await lock.release();
+    if (lock) {
+      try { await lock.release(); } catch {}
+    }
   }
 }
 

@@ -8,6 +8,7 @@ import { addTradePoints } from "./rewardService.js";
 import { portfolioCoalescer } from "../utils/requestCoalescer.js";
 import * as notificationService from "./notificationService.js";
 import redlock from "../plugins/redlock.js";
+import redis from "../plugins/redis.js";
 import { loggers } from "../utils/logger.js";
 
 const logger = loggers.trade;
@@ -53,30 +54,34 @@ export async function fillTrade({
   logger.info({ side, userId, mint: mint.substring(0, 8), qty }, "Trade order received");
 
   // Acquire distributed lock to prevent race conditions on concurrent trades
-  // Lock key format: trade:{userId}:{mint}
   const lockKey = `trade:${userId}:${mint}`;
-  const lockTTL = 5000; // 5 seconds - sufficient for trade execution
+  const lockTTL = 5000;
 
   let lock;
-  try {
-    lock = await redlock.acquire([lockKey], lockTTL);
-    logger.debug({ lockKey }, "Lock acquired");
-  } catch (error) {
-    logger.error({ lockKey, error }, "Failed to acquire trade lock");
-    throw new Error("Trade is already in progress for this token. Please wait and try again.");
+  const isRedisReady = redis.status === "ready";
+
+  if (isRedisReady) {
+    try {
+      lock = await redlock.acquire([lockKey], lockTTL);
+      logger.debug({ lockKey }, "Lock acquired");
+    } catch (error) {
+      logger.error({ lockKey, error }, "Failed to acquire trade lock");
+      throw new Error("Trade is already in progress for this token. Please wait and try again.");
+    }
+  } else {
+    logger.warn({ redisStatus: redis.status }, "Redis unavailable, executing trade without lock");
   }
 
   try {
-    // Execute trade within lock
     return await executeTradeLogic({ userId, mint, side, qty: q });
   } finally {
-    // Always release the lock
-    try {
-      await lock.release();
-      logger.debug({ lockKey }, "Lock released");
-    } catch (error) {
-      logger.error({ lockKey, error }, "Failed to release lock");
-      // Non-critical error - lock will expire automatically
+    if (lock) {
+      try {
+        await lock.release();
+        logger.debug({ lockKey }, "Lock released");
+      } catch (error) {
+        logger.error({ lockKey, error }, "Failed to release lock");
+      }
     }
   }
 }

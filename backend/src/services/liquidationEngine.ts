@@ -11,6 +11,7 @@ import {
   calculatePerpFee,
 } from "../utils/margin.js";
 import redlock from "../plugins/redlock.js";
+import redis from "../plugins/redis.js";
 import { loggers } from "../utils/logger.js";
 const logger = loggers.liquidation;
 
@@ -163,11 +164,15 @@ async function liquidatePosition(positionId: string, liquidationPrice: Decimal) 
   const lockKey = `perp:liquidate:${positionId}`;
   let lock;
 
-  try {
-    lock = await redlock.acquire([lockKey], 5000);
-  } catch (error) {
-    logger.error({ positionId, error }, "Failed to acquire lock");
-    return;
+  if (redis.status === "ready") {
+    try {
+      lock = await redlock.acquire([lockKey], 5000);
+    } catch (error) {
+      logger.error({ positionId, error }, "Failed to acquire liquidation lock");
+      return;
+    }
+  } else {
+    logger.warn({ redisStatus: redis.status }, "Redis unavailable, executing liquidation without lock");
   }
 
   try {
@@ -254,7 +259,9 @@ async function liquidatePosition(positionId: string, liquidationPrice: Decimal) 
   } catch (error) {
     logger.error({ positionId, error }, "Failed to liquidate position");
   } finally {
-    await lock.release();
+    if (lock) {
+      try { await lock.release(); } catch {}
+    }
   }
 }
 

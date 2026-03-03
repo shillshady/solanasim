@@ -9,7 +9,7 @@ export async function getTrendingTokens(): Promise<Backend.TrendingToken[]> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch trending tokens' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -24,7 +24,7 @@ export async function getTrending(sortBy: 'rank' | 'volume24hUSD' | 'liquidity' 
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch trending tokens' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -39,7 +39,7 @@ export async function getStocks(limit: number = 50): Promise<Backend.TrendingTok
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Failed to fetch stocks' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   const data = await response.json();
