@@ -1,6 +1,6 @@
 databases:
   - name: solanasim-db
-    plan: starter
+    plan: basic-256mb
     databaseName: solanasim
     user: solanasim
 
