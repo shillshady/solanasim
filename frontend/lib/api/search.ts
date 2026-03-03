@@ -45,13 +45,23 @@ export async function searchTokens(query: string, limit: number = 20): Promise<B
   }
 
   const data = await response.json();
-  return (data.results || []).map((token: any) => ({
+  const mapped = (data.results || []).map((token: any) => ({
     ...token,
     address: token.mint || token.address,
     imageUrl: token.logoURI || token.imageUrl,
     price: token.priceUsd || token.price || 0,
     lastPrice: token.priceUsd?.toString() || token.price?.toString() || null,
   }));
+
+  // Deduplicate by mint address, keeping the first (highest relevance) entry
+  const seen = new Map<string, typeof mapped[0]>();
+  for (const token of mapped) {
+    const key = token.address;
+    if (key && !seen.has(key)) {
+      seen.set(key, token);
+    }
+  }
+  return Array.from(seen.values());
 }
 
 export async function getTokenMetadata(mint: string): Promise<{

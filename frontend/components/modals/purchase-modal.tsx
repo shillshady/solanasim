@@ -14,6 +14,7 @@ import { ConfirmStep, ProcessingStep, SuccessStep, ErrorStep } from './purchase-
 import * as api from '@/lib/api';
 import * as purchaseTransaction from '@/lib/purchase-transaction';
 import type { PurchaseTier } from '@/lib/types/backend';
+import { errorLogger } from '@/lib/error-logger';
 
 interface PurchaseModalProps {
   open: boolean;
@@ -151,7 +152,7 @@ export function PurchaseModal({ open, onOpenChange, userId }: PurchaseModalProps
           }
         }
       } catch (err) {
-        console.error('Wallet connection error:', err);
+        errorLogger.error('Wallet connection error', { error: err as Error, component: 'PurchaseModal' });
         setError(err instanceof Error ? err.message : 'Failed to connect wallet');
         setIsConnecting(false);
       }
@@ -211,7 +212,7 @@ export function PurchaseModal({ open, onOpenChange, userId }: PurchaseModalProps
       await verifyMutation.mutateAsync(txResult.signature);
 
     } catch (err: any) {
-      console.error('Purchase error:', err);
+      errorLogger.error('Purchase error', { error: err as Error, component: 'PurchaseModal' });
       setError(err.message || 'Purchase failed');
       setStep('error');
     }
@@ -289,7 +290,13 @@ export function PurchaseModal({ open, onOpenChange, userId }: PurchaseModalProps
                 </Alert>
               )}
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-border/50">
+              <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
+                {!selectedTier && !connected && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Select a tier and connect your wallet to purchase
+                  </p>
+                )}
+                <div className="flex gap-3 justify-end">
                 <Button variant="outline" onClick={handleClose} className="px-8">Cancel</Button>
                 <Button
                   onClick={handleContinue}
@@ -305,6 +312,7 @@ export function PurchaseModal({ open, onOpenChange, userId }: PurchaseModalProps
                     <>Continue<Sparkles className="h-4 w-4 ml-2" /></>
                   )}
                 </Button>
+                </div>
               </div>
             </div>
           </>

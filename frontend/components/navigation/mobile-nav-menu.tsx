@@ -8,7 +8,7 @@ import {
   Menu, Settings, LogOut, Bell,
   TrendingUp, Wallet, Gift, Home
 } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import type { Notification as AppNotification } from "@/hooks/use-notifications"
 
@@ -56,6 +56,7 @@ export function MobileNavMenu({
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-80 overflow-y-auto">
+        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
         <div className="flex flex-col space-y-4 mt-4">
           {/* Notifications Section */}
           {isAuthenticated && (

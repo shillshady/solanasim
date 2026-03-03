@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Home, TrendingUp, Wallet, Trophy, Moon, Sun, Gift, Eye, Zap } from "lucide-react"
 import { Twitter as XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { errorLogger } from "@/lib/error-logger"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { motion, AnimatePresence } from "framer-motion"
@@ -26,7 +27,7 @@ export function BottomNavBar() {
   const [mounted, setMounted] = useState(false)
   const { prices, subscribe, unsubscribe } = usePriceStreamContext()
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([
-    { symbol: "SOL", price: 250, change24h: 0 }, // Default to reasonable price instead of 0
+    { symbol: "SOL", price: 0, change24h: 0 },
   ])
 
   // Prevent hydration mismatch by only rendering theme toggle after mount
@@ -66,7 +67,7 @@ export function BottomNavBar() {
         if (data.solana?.usd) {
           setMarketPrices(prev => {
             // Only update if we still have the default price
-            if (prev[0]?.price === 250 || prev[0]?.price === 0) {
+            if (prev[0]?.price === 0) {
               return [{
                 symbol: "SOL",
                 price: data.solana.usd,
@@ -77,7 +78,7 @@ export function BottomNavBar() {
           })
         }
       } catch (error) {
-        console.warn('Failed to fetch SOL price:', error)
+        errorLogger.warn('Failed to fetch SOL price', { error: error as Error, component: 'BottomNavBar' })
       }
     }
 
@@ -180,7 +181,7 @@ export function BottomNavBar() {
             >
               <XIcon className="h-4 w-4 hover:glow-primary" />
             </a>
-            <span className="text-xs text-muted-foreground">© 2025 Solana Sim</span>
+            <span className="text-xs text-muted-foreground">© 2026 Solana Sim</span>
           </div>
 
           {/* Center: Market Prices */}
@@ -192,7 +193,9 @@ export function BottomNavBar() {
                   <span className="text-xs font-semibold text-foreground">{market.symbol}</span>
                 </div>
                 <span className="text-xs font-bold text-foreground">
-                  ${market.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {market.price > 0
+                    ? `$${market.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : '--'}
                 </span>
                 <span
                   className={cn(

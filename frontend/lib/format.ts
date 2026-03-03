@@ -149,24 +149,9 @@ export function formatPriceUSD(n: number): string {
     return "$0.00";
   }
 
-  // Very small values: show actual precision up to 10 decimals
-  // Remove trailing zeros
-  const formatted = n.toFixed(10).replace(/\.?0+$/, '');
-  const [whole, decimal] = formatted.split('.');
-
-  if (decimal && decimal.length > 0) {
-    // Count leading zeros after decimal point
-    const leadingZeros = decimal.match(/^0*/)?.[0]?.length || 0;
-
-    if (leadingZeros >= 5) {
-      // If more than 5 leading zeros, show in a more readable format
-      return `$0.0{${leadingZeros}}${decimal.slice(leadingZeros)}`;
-    }
-
-    return `$${formatted}`;
-  }
-
-  return "$0.00";
+  // Very small values: show actual precision up to 10 decimals, trim trailing zeros
+  const formatted = n.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+  return `$${formatted}`;
 }
 
 /**

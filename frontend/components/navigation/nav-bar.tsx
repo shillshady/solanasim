@@ -14,6 +14,9 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   Settings, LogOut,
   TrendingUp, Wallet,
   ChevronDown, Gift, Home
@@ -103,26 +106,35 @@ export function NavBar() {
             </Link>
 
             <nav className="hidden md:flex items-center space-x-1">
-              {navigationItems.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
+              <TooltipProvider delayDuration={300}>
+                {navigationItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname === item.href
 
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <Button
-                      variant={isActive ? "secondary" : "ghost"}
-                      size="sm"
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 transition-all duration-200",
-                        isActive && "bg-brand-muted text-brand font-semibold"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden lg:inline">{item.name}</span>
-                    </Button>
-                  </Link>
-                )
-              })}
+                  return (
+                    <Tooltip key={item.href}>
+                      <TooltipTrigger asChild>
+                        <Link href={item.href}>
+                          <Button
+                            variant={isActive ? "secondary" : "ghost"}
+                            size="sm"
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 transition-all duration-200",
+                              isActive && "bg-brand-muted text-brand font-semibold"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span className="hidden lg:inline">{item.name}</span>
+                          </Button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent className="lg:hidden">
+                        {item.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </TooltipProvider>
             </nav>
           </div>
 
@@ -142,7 +154,9 @@ export function NavBar() {
                   <Wallet className="h-4 w-4 text-brand group-hover:scale-110 transition-transform" />
                   <div className="text-sm">
                     <div className="font-semibold text-foreground">
-                      {balanceData ? `${parseFloat(balanceData.balance).toFixed(2)} SOL` : 'Loading...'}
+                      {balanceData
+                        ? `${parseFloat(balanceData.balance).toFixed(2)} SOL`
+                        : <span className="inline-block w-16 h-4 bg-muted animate-pulse rounded" />}
                     </div>
                     {solPrice > 0 && balanceData && (
                       <div className="hidden sm:block text-xs text-foreground/60">

@@ -71,7 +71,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-center">
-          <p className="text-sm text-background/60">© 2025 Solana Sim. All rights reserved.</p>
+          <p className="text-sm text-background/60">© 2026 Solana Sim. All rights reserved.</p>
           <p className="mt-2 text-xs text-background/40">
             <strong>Disclaimer:</strong> Solana Sim is a simulator. No real financial risk is involved.
           </p>

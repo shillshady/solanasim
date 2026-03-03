@@ -58,9 +58,29 @@ export function LeaderboardPreview() {
         >
           <Card className="max-w-4xl mx-auto bg-background border-2 border-background overflow-hidden">
             {isLoading ? (
-              <div className="py-12 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
-                <p className="mt-4 text-muted-foreground">Loading top traders...</p>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-foreground">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-background">Rank</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-background">Trader</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-background">PnL (USD)</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-background">Trades</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-background">Volume (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {[1, 2, 3, 4].map((i) => (
+                      <tr key={i}>
+                        <td className="px-6 py-4"><div className="h-5 w-8 bg-muted animate-pulse rounded" /></td>
+                        <td className="px-6 py-4"><div className="h-5 w-24 bg-muted animate-pulse rounded" /></td>
+                        <td className="px-6 py-4 text-right"><div className="h-5 w-16 bg-muted animate-pulse rounded ml-auto" /></td>
+                        <td className="px-6 py-4 text-right"><div className="h-5 w-10 bg-muted animate-pulse rounded ml-auto" /></td>
+                        <td className="px-6 py-4 text-right"><div className="h-5 w-16 bg-muted animate-pulse rounded ml-auto" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="overflow-x-auto">

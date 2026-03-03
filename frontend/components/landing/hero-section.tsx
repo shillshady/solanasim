@@ -59,7 +59,7 @@ export function HeroSection() {
                 className="w-full sm:w-auto border-2 border-background text-background hover:bg-background hover:text-foreground"
                 onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
               >
-                Learn More
+                Learn More ↓
               </Button>
             </motion.div>
 
@@ -70,8 +70,8 @@ export function HeroSection() {
               transition={{ delay: 0.6 }}
             >
               <div className="space-y-1">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00ff85]">10-100 SOL</div>
-                <p className="text-xs sm:text-sm text-background/60">Starting balance (10 SOL standard, 100 SOL for SIM holders)</p>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00ff85]">100 SOL</div>
+                <p className="text-xs sm:text-sm text-background/60">Virtual starting balance for all users</p>
               </div>
               <div className="space-y-1">
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold">Rewards</div>
@@ -100,7 +100,7 @@ export function HeroSection() {
                 className="w-full h-auto object-contain"
               >
                 <source src="/final comp_1.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
+                <span className="sr-only">Demo video of the Solana Sim trading platform</span>
               </video>
             </div>
           </motion.div>

@@ -7,9 +7,9 @@ import { tokenMetadataCoalescer } from "../utils/requestCoalescer.js";
 import { loggers } from "../utils/logger.js";
 const logger = loggers.token;
 
-const HELIUS = process.env.HELIUS_API!;
+const HELIUS = process.env.HELIUS_API || '';
 const DEX = "https://api.dexscreener.com";
-const JUPITER = "https://price.jup.ag/v6";
+const JUPITER = "https://api.jup.ag/price/v2";
 
 // Redis cache TTL: 1 hour for metadata (logos, names rarely change)
 const REDIS_TOKEN_META_TTL = 3600;
@@ -190,7 +190,7 @@ async function getTokenMetaUncached(mint: string) {
     }
   }
 
-  // 2. Try Helius token metadata
+  // 2. Try Helius DAS API (replaces deprecated token-metadata endpoint)
   try {
     // Validate mint address format (base58, 32-44 chars)
     if (!mint || mint.length < 32 || mint.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(mint)) {
@@ -198,31 +198,52 @@ async function getTokenMetaUncached(mint: string) {
       return token;
     }
 
-    const json = await fetchJSON<any[]>(
-      `https://api.helius.xyz/v0/token-metadata?api-key=${HELIUS}&mintAccounts=${mint}`,
-      { timeout: 8000, retries: 2, retryDelay: 500 }
+    if (!HELIUS) {
+      logger.debug("HELIUS_API not set, skipping Helius DAS API");
+      throw new Error('HELIUS_API not configured');
+    }
+
+    const dasData = await fetchJSON<any>(
+      `https://mainnet.helius-rpc.com/?api-key=${HELIUS}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'metadata-fetch',
+          method: 'getAsset',
+          params: { id: mint, options: { showFungible: true } }
+        }),
+        timeout: 8000,
+        retries: 2,
+        retryDelay: 500
+      }
     );
-    const meta = json[0]?.onChainMetadata?.metadata || json[0]?.offChainMetadata?.metadata;
-    if (meta) {
+
+    const content = dasData.result?.content;
+    const metadata = content?.metadata;
+    if (metadata) {
+      const imageUri = content?.links?.image || content?.files?.[0]?.cdn_uri || content?.files?.[0]?.uri || null;
+
       token = await prisma.token.upsert({
         where: { address: mint },
         update: {
-          symbol: meta.symbol || null,
-          name: meta.name || null,
-          logoURI: meta.image || null,
-          website: meta.external_url || null,
-          twitter: meta.extensions?.twitter || null,
-          telegram: meta.extensions?.telegram || null,
+          symbol: metadata.symbol || null,
+          name: metadata.name || null,
+          logoURI: imageUri,
+          website: content?.links?.external_url || null,
+          twitter: metadata.extensions?.twitter || null,
+          telegram: metadata.extensions?.telegram || null,
           lastUpdated: new Date()
         },
         create: {
           address: mint,
-          symbol: meta.symbol || null,
-          name: meta.name || null,
-          logoURI: meta.image || null,
-          website: meta.external_url || null,
-          twitter: meta.extensions?.twitter || null,
-          telegram: meta.extensions?.telegram || null,
+          symbol: metadata.symbol || null,
+          name: metadata.name || null,
+          logoURI: imageUri,
+          website: content?.links?.external_url || null,
+          twitter: metadata.extensions?.twitter || null,
+          telegram: metadata.extensions?.telegram || null,
         }
       });
 
@@ -238,7 +259,7 @@ async function getTokenMetaUncached(mint: string) {
   } catch (e: any) {
     // Don't log 400 errors (invalid token addresses) to reduce noise
     if (!e.message?.includes('400') && !e.message?.includes('Bad Request')) {
-      logger.warn({ code: e.code, err: e.message }, "Helius metadata failed");
+      logger.warn({ code: e.code, err: e.message }, "Helius DAS metadata failed");
     }
   }
 
@@ -315,7 +336,7 @@ async function getTokenMetaUncached(mint: string) {
 
   // 5. FINAL fallback for pump.fun and low-cap tokens: Fetch on-chain Metaplex metadata
   // This catches tokens that creators uploaded logos for but aren't indexed by aggregators yet
-  if (token && !token.logoURI) {
+  if (token && !token.logoURI && HELIUS) {
     try {
       // Use Helius DAS (Digital Asset Standard) API for Metaplex metadata
       const dasData = await fetchJSON<any>(
@@ -447,6 +468,11 @@ export async function getTokenMetaBatch(mints: string[]) {
       return results.filter(Boolean);
     }
 
+    if (!HELIUS) {
+      logger.debug("HELIUS_API not set, skipping batch DAS fetch");
+      return results.filter(Boolean);
+    }
+
     logger.info({ count: missingMints.length }, "Batch fetching tokens from Helius DAS API");
 
     // Batch fetch missing tokens from Helius DAS API (max 1000 per call)
@@ -562,7 +588,7 @@ async function getTokenPriceDataUncached(mint: string) {
   // Try Jupiter price API first
   try {
     const data = await fetchJSON<any>(
-      `${JUPITER}/price?ids=${mint}`,
+      `${JUPITER}?ids=${mint}&showExtraInfo=true`,
       { timeout: 8000, retries: 0, retryDelay: 500 } // No retries - fail fast, DexScreener is fallback
     );
     const price = data.data?.[mint]?.price;

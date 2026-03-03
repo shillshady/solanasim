@@ -1,8 +1,15 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { errorLogger } from '@/lib/error-logger'
+
+const IPFS_GATEWAYS = [
+  'https://cloudflare-ipfs.com/ipfs/',
+  'https://gateway.pinata.cloud/ipfs/',
+  'https://ipfs.io/ipfs/',
+]
 
 interface TokenImageProps {
   src?: string | null
@@ -14,55 +21,58 @@ interface TokenImageProps {
   fallback?: string
 }
 
-export function TokenImage({ 
-  src, 
-  alt, 
-  className, 
-  width, 
-  height, 
+export function TokenImage({
+  src,
+  alt,
+  className,
+  width,
+  height,
   size = 32,
   fallback = "/placeholder-token.svg"
 }: TokenImageProps) {
   const [hasError, setHasError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [ipfsGatewayIndex, setIpfsGatewayIndex] = useState(0)
 
   const finalWidth = width || size
   const finalHeight = height || size
-  
+
+  // Extract IPFS hash if it's an IPFS URL
+  const ipfsHash = src?.startsWith('ipfs://') ? src.replace('ipfs://', '') : null
+
   // Process image source to ensure it loads properly
   let processedSrc = src
   if (src) {
-    // Handle DexScreener URLs
-    if (src.includes('dd.dexscreener.com')) {
-      // Ensure the URL has a proper https:// prefix if missing
-      if (!src.startsWith('http')) {
-        processedSrc = `https://${src}`
-      }
+    if (src.includes('dd.dexscreener.com') && !src.startsWith('http')) {
+      processedSrc = `https://${src}`
     }
-    
-    // Handle other potential issues with URLs
+
     if (src.startsWith('//')) {
       processedSrc = `https:${src}`
     }
-    
-    // Handle IPFS URLs
-    if (src.startsWith('ipfs://')) {
-      processedSrc = `https://ipfs.io/ipfs/${src.replace('ipfs://', '')}`
+
+    // Handle IPFS URLs with gateway rotation
+    if (ipfsHash) {
+      processedSrc = `${IPFS_GATEWAYS[ipfsGatewayIndex]}${ipfsHash}`
     }
-    
-    // Handle arweave URLs
+
     if (src.startsWith('ar://')) {
       processedSrc = `https://arweave.net/${src.replace('ar://', '')}`
     }
-    
-    // Debug image URL in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug(`Original token image URL: ${src}`)
-      console.debug(`Processed token image URL: ${processedSrc}`)
-    }
   }
-  
+
   const imageSrc = (hasError || !processedSrc) ? fallback : processedSrc
+
+  const handleError = useCallback(() => {
+    // If IPFS, try next gateway before giving up
+    if (ipfsHash && ipfsGatewayIndex < IPFS_GATEWAYS.length - 1) {
+      setIpfsGatewayIndex(prev => prev + 1)
+      return
+    }
+    errorLogger.warn(`Failed to load token image: ${src}`, { component: 'TokenImage' });
+    setHasError(true);
+    setIsLoading(false);
+  }, [src, ipfsHash, ipfsGatewayIndex])
 
   return (
     <div className={cn("relative overflow-hidden rounded-full", className)} style={{ width: finalWidth, height: finalHeight }}>
@@ -75,16 +85,11 @@ export function TokenImage({
         width={finalWidth}
         height={finalHeight}
         className="object-cover rounded-full"
-        onError={(e) => {
-          console.warn(`Failed to load token image: ${src}`, e);
-          // Try direct load with unoptimized image if it failed
-          setHasError(true);
-          setIsLoading(false);
-        }}
+        onError={handleError}
         onLoad={() => setIsLoading(false)}
         priority={false}
-        unoptimized={true} // Disable Next.js image optimization for all token images to avoid potential issues
-        referrerPolicy="no-referrer" // Don't send referrer info to external domains
+        unoptimized={true}
+        referrerPolicy="no-referrer"
       />
     </div>
   )

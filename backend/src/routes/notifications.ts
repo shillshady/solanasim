@@ -112,6 +112,35 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   /**
+   * PATCH /api/notifications/read-all
+   * Mark all notifications as read
+   * NOTE: Must be registered BEFORE /:id/read to avoid Fastify matching "read-all" as :id
+   */
+  fastify.patch(
+    '/read-all',
+    {
+      preHandler: [authenticateToken],
+      schema: {
+        response: {
+          200: {
+            type: 'object',
+            required: ['success'],
+            properties: {
+              success: { type: 'boolean', const: true },
+            },
+          },
+        },
+      },
+    },
+    async (request: AuthenticatedRequest, reply) => {
+      const userId = request.user!.id;
+      await notificationService.markAllNotificationsAsRead(userId);
+
+      return { success: true };
+    }
+  );
+
+  /**
    * PATCH /api/notifications/:id/read
    * Mark a notification as read
    */
@@ -143,34 +172,6 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
       const { id } = request.params as { id: string };
 
       await notificationService.markNotificationAsRead(id, userId);
-
-      return { success: true };
-    }
-  );
-
-  /**
-   * PATCH /api/notifications/read-all
-   * Mark all notifications as read
-   */
-  fastify.patch(
-    '/read-all',
-    {
-      preHandler: [authenticateToken],
-      schema: {
-        response: {
-          200: {
-            type: 'object',
-            required: ['success'],
-            properties: {
-              success: { type: 'boolean', const: true },
-            },
-          },
-        },
-      },
-    },
-    async (request: AuthenticatedRequest, reply) => {
-      const userId = request.user!.id;
-      await notificationService.markAllNotificationsAsRead(userId);
 
       return { success: true };
     }

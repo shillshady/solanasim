@@ -37,6 +37,7 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import * as api from '@/lib/api'
+import { errorLogger } from '@/lib/error-logger'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -139,7 +140,7 @@ function UserSettingsPage() {
         const parsed = JSON.parse(savedSettings)
         setSettingsData(parsed)
       } catch (e) {
-        console.error('Failed to parse saved settings')
+        errorLogger.error('Failed to parse saved settings', { component: 'UserSettingsPage' })
       }
     }
   }, [])
@@ -869,7 +870,15 @@ function UserSettingsPage() {
             <div>
               <p className="text-sm text-muted-foreground">Account Type</p>
               <Badge variant="secondary" className="mt-1">
-                {profile?.userTier || 'Standard'}
+                {(() => {
+                  const tier = profile?.userTier;
+                  switch (tier) {
+                    case 'EMAIL_USER': return 'Email Account';
+                    case 'WALLET_USER': return 'Wallet Account';
+                    case 'VSOL_HOLDER': return '$SIM Holder';
+                    default: return tier || 'Standard';
+                  }
+                })()}
               </Badge>
             </div>
             <div>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './use-auth';
 import { api } from '@/lib/api';
+import { errorLogger } from '@/lib/error-logger';
 import type { Notification as BackendNotification, NotificationResponse } from '@/lib/types/backend';
 
 // Frontend notification type for compatibility with existing UI
@@ -51,7 +52,7 @@ function convertNotification(backendNotif: BackendNotification): Notification {
   try {
     metadata = backendNotif.metadata ? JSON.parse(backendNotif.metadata) : {};
   } catch (e) {
-    console.error('Failed to parse notification metadata:', e);
+    errorLogger.error('Failed to parse notification metadata', { error: e as Error, component: 'useNotifications' });
   }
 
   return {
@@ -95,7 +96,7 @@ export function useNotifications() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      errorLogger.error('Failed to fetch notifications', { error: error as Error, component: 'useNotifications' });
       setState(prev => ({ ...prev, loading: false }));
     }
   }, [user?.id, isAuthenticated]);
@@ -131,7 +132,7 @@ export function useNotifications() {
     try {
       await api.patch(`/api/notifications/${notificationId}/read`);
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      errorLogger.error('Failed to mark notification as read', { error: error as Error, component: 'useNotifications' });
       // Revert on error
       fetchNotifications();
     }
@@ -140,28 +141,27 @@ export function useNotifications() {
   const markAllAsRead = useCallback(async () => {
     if (!isAuthenticated || !user?.id) return;
 
-    // Store previous state for potential revert
-    const previousState = state;
-
-    // Optimistic update
-    setState(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true })),
-      unreadCount: 0,
-    }));
+    // Capture snapshot before mutation via functional setState
+    let previousSnapshot: NotificationState | null = null;
+    setState(prev => {
+      previousSnapshot = { ...prev, notifications: [...prev.notifications] };
+      return {
+        ...prev,
+        notifications: prev.notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      };
+    });
 
     try {
-      const response = await api.patch(`/api/notifications/read-all`);
-      console.log('Mark all as read response:', response);
-
-      // Fetch fresh data to ensure sync
+      await api.patch(`/api/notifications/read-all`);
       await fetchNotifications();
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
-      // Revert to previous state on error
-      setState(previousState);
+      errorLogger.error('Failed to mark all notifications as read', { error: error as Error, component: 'useNotifications' });
+      if (previousSnapshot) {
+        setState(previousSnapshot);
+      }
     }
-  }, [isAuthenticated, user?.id, state, fetchNotifications]);
+  }, [isAuthenticated, user?.id, fetchNotifications]);
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
     const newNotification: Notification = {
@@ -195,7 +195,7 @@ export function useNotifications() {
     try {
       await api.delete(`/api/notifications/${notificationId}`);
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      errorLogger.error('Failed to delete notification', { error: error as Error, component: 'useNotifications' });
       // Revert on error
       fetchNotifications();
     }

@@ -85,8 +85,11 @@ export async function getTrendingTokens(limit: number = 20, sortBy: BirdeyeSortB
 
 async function getBirdeyeTrending(limit: number, sortBy: BirdeyeSortBy = 'rank'): Promise<TrendingToken[]> {
   try {
-    // Temporarily hardcode the API key for testing
-    const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || "caa61fdc964643e197d86d70d5d70671";
+    const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
+    if (!BIRDEYE_API_KEY) {
+      logger.warn("BIRDEYE_API_KEY not set, skipping Birdeye trending");
+      return [];
+    }
 
     logger.debug({ hasApiKey: !!BIRDEYE_API_KEY, sortBy }, "Fetching Birdeye trending tokens");
 

@@ -317,7 +317,7 @@ export default function TrendingPage() {
                         onClick={() => handleSort("trendScore")}
                         className="flex items-center hover:text-foreground transition-colors"
                       >
-                        Trend Score
+                        Activity
                         <SortIcon field="trendScore" />
                       </button>
                     </th>
@@ -446,8 +446,9 @@ export default function TrendingPage() {
                                 ease: "easeInOut"
                               } : {}}
                             >
-                              {token.priceChange24h >= 0 ? "+" : ""}
-                              {token.priceChange24h.toFixed(2)}%
+                              {token.priceChange24h === 0 ? "—" : (
+                              `${token.priceChange24h >= 0 ? "+" : ""}${token.priceChange24h.toFixed(2)}%`
+                            )}
                             </motion.div>
                             {bigMover && (
                               token.priceChange24h >= 0 ? (
@@ -483,13 +484,15 @@ export default function TrendingPage() {
                           />
                         </td>
 
-                        {/* Trend Score */}
+                        {/* Activity score derived from price volatility */}
                         <td className="p-5 relative z-10">
                           <Badge
                             variant="secondary"
                             className={`text-xs ${bigMover ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : ''}`}
                           >
-                            {Math.abs(token.priceChange24h).toFixed(1)}
+                            {Math.abs(token.priceChange24h) === 0
+                              ? '—'
+                              : Math.abs(token.priceChange24h).toFixed(1)}
                           </Badge>
                         </td>
 

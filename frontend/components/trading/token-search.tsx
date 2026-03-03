@@ -115,7 +115,7 @@ export function TokenSearch() {
                       }}
                     />
                   )}
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{token.symbol}</span>
                       {token.trending && (
@@ -128,6 +128,11 @@ export function TokenSearch() {
                     <div className="text-sm text-muted-foreground truncate">
                       {token.name}
                     </div>
+                    {token.address && (
+                      <div className="text-[10px] font-mono text-muted-foreground/60 truncate">
+                        {token.address.slice(0, 4)}...{token.address.slice(-4)}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="font-mono text-sm">
