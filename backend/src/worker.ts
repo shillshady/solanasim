@@ -14,7 +14,7 @@ import prisma from "./plugins/prisma.js";
 import priceService from "./plugins/priceService-optimized.js";
 import { loggers } from "./utils/logger.js";
 
-const logger = loggers.priceService;
+const logger = loggers.worker;
 
 // Configuration
 const TRENDING_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -29,7 +29,7 @@ const TOP_TOKENS_COUNT = 100; // Pre-warm top 100 most traded tokens
  */
 async function calculateTrendingScores() {
   try {
-    logger.info("🔥 Starting trending token calculation...");
+    logger.info("Starting trending token calculation");
 
     // Get all tokens that have been traded recently
     const tokens = await prisma.token.findMany({
@@ -115,10 +115,10 @@ async function calculateTrendingScores() {
       updated,
       errors,
       total: tokens.length
-    }, "✅ Trending calculation complete");
+    }, "Trending calculation complete");
 
   } catch (error) {
-    logger.error({ error }, "❌ Error calculating trending scores");
+    logger.error({ error }, "Error calculating trending scores");
   }
 }
 
@@ -131,7 +131,7 @@ async function calculateTrendingScores() {
  */
 async function prewarmPriceCache() {
   try {
-    logger.debug("♨️  Pre-warming price cache...");
+    logger.debug("Pre-warming price cache");
 
     // Get top tokens by 24h volume (most likely to be requested)
     const popularTokens = await prisma.token.findMany({
@@ -160,10 +160,10 @@ async function prewarmPriceCache() {
       requested: addresses.length,
       cached,
       hitRate: `${((cached / addresses.length) * 100).toFixed(1)}%`
-    }, "✅ Price cache pre-warmed");
+    }, "Price cache pre-warmed");
 
   } catch (error) {
-    logger.error({ error }, "❌ Error pre-warming price cache");
+    logger.error({ error }, "Error pre-warming price cache");
   }
 }
 
@@ -171,19 +171,19 @@ async function prewarmPriceCache() {
  * Main Worker Service
  */
 async function startWorker() {
-  logger.info("🚀 Solana Sim Worker Service Starting...");
+  logger.info("Solana Sim Worker Service starting");
 
   // Initialize price service
   await priceService.start();
-  logger.info("✅ Price service connected");
+  logger.info("Price service connected");
 
   // Verify database connection
   try {
     await prisma.$queryRaw`SELECT 1`;
-    logger.info("✅ Database connected");
+    logger.info("Database connected");
   } catch (dbError) {
     const errorMsg = dbError instanceof Error ? dbError.message : String(dbError);
-    logger.error({ error: dbError }, "❌ Database connection failed");
+    logger.error({ error: dbError }, "Database connection failed");
     throw new Error(`Database connection failed: ${errorMsg}`);
   }
 
@@ -194,10 +194,10 @@ async function startWorker() {
       prewarmPriceCache(),
       calculateTrendingScores()
     ]);
-    logger.info("✅ Initial jobs completed");
+    logger.info("Initial jobs completed");
   } catch (jobError) {
     const errorMsg = jobError instanceof Error ? jobError.message : String(jobError);
-    logger.error({ error: jobError }, "❌ Initial jobs failed");
+    logger.error({ error: jobError }, "Initial jobs failed");
     throw new Error(`Initial jobs failed: ${errorMsg}`);
   }
 
@@ -205,7 +205,7 @@ async function startWorker() {
   logger.info({
     trendingInterval: `${TRENDING_INTERVAL / 1000 / 60}m`,
     priceWarmupInterval: `${PRICE_WARMUP_INTERVAL / 1000}s`
-  }, "⏰ Scheduling background jobs");
+  }, "Scheduling background jobs");
 
   // Job 1: Trending Calculator (every 5 minutes)
   setInterval(calculateTrendingScores, TRENDING_INTERVAL);
@@ -213,18 +213,18 @@ async function startWorker() {
   // Job 2: Price Pre-warmer (every 30 seconds)
   setInterval(prewarmPriceCache, PRICE_WARMUP_INTERVAL);
 
-  logger.info("✅ Worker service running");
+  logger.info("Worker service running");
 }
 
 // Graceful shutdown (prisma singleton handles its own disconnect)
 process.on('SIGTERM', async () => {
-  logger.info("🛑 Received SIGTERM, shutting down gracefully...");
+  logger.info("Received SIGTERM, shutting down gracefully");
   await priceService.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  logger.info("🛑 Received SIGINT, shutting down gracefully...");
+  logger.info("Received SIGINT, shutting down gracefully");
   await priceService.stop();
   process.exit(0);
 });

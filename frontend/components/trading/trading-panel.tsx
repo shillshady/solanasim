@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { usePortfolio, usePosition } from "@/hooks/use-portfolio"
 import { BuyOrderForm } from "./buy-order-form"
 import { SellOrderForm } from "./sell-order-form"
+import { AuthCTA } from "@/components/auth/auth-cta"
 
 type TokenDetails = {
   tokenAddress: string
@@ -341,10 +342,12 @@ function TradingPanelComponent({ tokenAddress: propTokenAddress }: TradingPanelP
               <h3 className="font-bold text-lg">Trade {tokenDetails.tokenSymbol || 'Token'}</h3>
               {isRefreshing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Wallet className="h-4 w-4" />
-              <span className="font-mono">{balance.toFixed(2)} SOL</span>
-            </div>
+            {isAuthenticated && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Wallet className="h-4 w-4" />
+                <span className="font-mono">{balance.toFixed(2)} SOL</span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end">
             <AnimatedNumber value={currentPrice} prefix="$" decimals={8} className="font-mono text-2xl font-bold text-foreground" colorize={false} glowOnChange={true} />
@@ -357,7 +360,7 @@ function TradingPanelComponent({ tokenAddress: propTokenAddress }: TradingPanelP
               />
             )}
           </div>
-          {tokenHolding && (
+          {isAuthenticated && tokenHolding && (
             <div className="space-y-1">
               <div className="text-sm text-muted-foreground">
                 Holdings: {formatTokenQuantity(tokenHolding.qty)} {tokenDetails.tokenSymbol}
