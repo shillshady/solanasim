@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { env } from './env'
 import { errorLogger } from './error-logger'
+import { SOL_MINT } from './constants'
 
 export enum ConnectionState {
   Disconnected = 'DISCONNECTED',
@@ -203,8 +204,12 @@ function usePriceStream(options: {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
         
+        // Derive WS URL — ensure it points to /ws/prices
+        const baseWsUrl = env.NEXT_PUBLIC_WS_URL.replace(/\/(ws\/)?prices?\/?$/, '')
+        const wsUrl = `${baseWsUrl}/ws/prices`
+
         // Create WebSocket with explicit protocols for better proxy/CDN compatibility
-        ws = new WebSocket(env.NEXT_PUBLIC_WS_URL, ['websocket'])
+        ws = new WebSocket(wsUrl, ['websocket'])
         wsRef.current = ws
         
         errorLogger.debug(`WebSocket created, readyState: ${ws.readyState}`, { component: 'PriceStream' })
@@ -247,7 +252,6 @@ function usePriceStream(options: {
         startHeartbeat()
 
         // Subscribe to SOL first for base price calculations
-        const SOL_MINT = 'So11111111111111111111111111111111111111112'
         try {
           ws.send(JSON.stringify({ type: 'subscribe', mint: SOL_MINT }))
         } catch (err) {
@@ -383,7 +387,7 @@ function usePriceStream(options: {
     const jitter = Math.random() * 0.5 * baseDelay // Add up to 50% jitter
     const delay = Math.floor(baseDelay + jitter)
     
-    console.log(`🔄 Scheduling reconnect in ${(delay / 1000).toFixed(1)}s (attempt ${reconnectAttemptsRef.current}/${options.maxReconnectAttempts})`)
+    errorLogger.info(`Scheduling reconnect in ${(delay / 1000).toFixed(1)}s (attempt ${reconnectAttemptsRef.current}/${options.maxReconnectAttempts})`, { component: 'PriceStream' })
     
     reconnectTimeoutRef.current = setTimeout(() => {
       reconnectTimeoutRef.current = null
@@ -402,7 +406,7 @@ function usePriceStream(options: {
       try {
         wsRef.current.send(JSON.stringify({ type: 'subscribe', mint: tokenAddress }))
       } catch (err) {
-        console.error('Failed to send subscription:', err)
+        errorLogger.error('Failed to send subscription', { error: err as Error, component: 'PriceStream' })
       }
     }
   }, [])
@@ -416,7 +420,7 @@ function usePriceStream(options: {
       try {
         wsRef.current.send(JSON.stringify({ type: 'unsubscribe', mint: tokenAddress }))
       } catch (err) {
-        console.error('Failed to send unsubscription:', err)
+        errorLogger.error('Failed to send unsubscription', { error: err as Error, component: 'PriceStream' })
       }
     }
   }, [])
@@ -430,7 +434,7 @@ function usePriceStream(options: {
   }, [unsubscribe])
   
   const reconnect = useCallback(() => {
-    console.log('🔄 Manual reconnect requested')
+    errorLogger.info('Manual reconnect requested', { component: 'PriceStream' })
     cleanup()
     reconnectAttemptsRef.current = 0
     consecutiveFailuresRef.current = 0
@@ -447,7 +451,7 @@ function usePriceStream(options: {
   }, [connect, cleanup, updateConnectionState])
   
   const disconnect = useCallback(() => {
-    console.log('🚫 Manual disconnect requested')
+    errorLogger.info('Manual disconnect requested', { component: 'PriceStream' })
     isManuallyClosedRef.current = true
     cleanup()
     updateConnectionState(ConnectionState.Disconnected)
@@ -457,7 +461,7 @@ function usePriceStream(options: {
   // Enhanced effect with better mounting/unmounting handling
   useEffect(() => {
     if (options.enabled && !isManuallyClosedRef.current) {
-      console.log('🚀 Price stream enabled, initiating connection')
+      errorLogger.info('Price stream enabled, initiating connection', { component: 'PriceStream' })
       
       // Delay to prevent rapid mounting/unmounting in React Strict Mode
       const timer = setTimeout(() => {
@@ -471,7 +475,7 @@ function usePriceStream(options: {
         cleanup()
       }
     } else {
-      console.log('⏹️ Price stream disabled or manually closed')
+      errorLogger.debug('Price stream disabled or manually closed', { component: 'PriceStream' })
     }
     
     return () => {
@@ -482,7 +486,7 @@ function usePriceStream(options: {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log('🧹 Price stream provider unmounting')
+      errorLogger.debug('Price stream provider unmounting', { component: 'PriceStream' })
       cleanup()
     }
   }, [cleanup])
@@ -503,28 +507,10 @@ function usePriceStream(options: {
 }
 
 export function PriceStreamProvider({ children }: PriceStreamProviderProps) {
-  // DEBUG: Log provider initialization
-  console.log('🔍 [DEBUG] PriceStreamProvider initializing...')
-  console.log('🔍 [DEBUG] Environment check:', {
-    NEXT_PUBLIC_WS_URL: typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_WS_URL : 'server-side',
-    NODE_ENV: process.env.NODE_ENV,
-    isBrowser: typeof window !== 'undefined'
-  })
-  
-  // Enhanced WebSocket connection with comprehensive error handling and reconnection logic
   const priceStream = usePriceStream({
     enabled: true,
     autoReconnect: true,
-    maxReconnectAttempts: 10 // Increased attempts with better backoff strategy
-  })
-
-  // DEBUG: Log price stream state
-  console.log('🔍 [DEBUG] PriceStream state:', {
-    connected: priceStream.connected,
-    connecting: priceStream.connecting,
-    connectionState: priceStream.connectionState,
-    error: priceStream.error,
-    pricesCount: priceStream.prices.size
+    maxReconnectAttempts: 10
   })
 
   return (
