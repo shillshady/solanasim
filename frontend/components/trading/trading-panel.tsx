@@ -372,80 +372,90 @@ function TradingPanelComponent({ tokenAddress: propTokenAddress }: TradingPanelP
           )}
         </div>
 
-        <Tabs defaultValue={searchParams.get('action') === 'sell' ? 'sell' : 'buy'} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-14 sm:h-12 gap-1">
-            <TabsTrigger value="buy" className="tab-buy font-bold text-base sm:text-sm h-12 sm:h-auto">Buy</TabsTrigger>
-            <TabsTrigger value="sell" className="tab-sell font-bold text-base sm:text-sm h-12 sm:h-auto" disabled={!tokenHolding || tokenBalance <= 0}>Sell</TabsTrigger>
-          </TabsList>
+        {isAuthenticated ? (
+          <Tabs defaultValue={searchParams.get('action') === 'sell' ? 'sell' : 'buy'} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-14 sm:h-12 gap-1">
+              <TabsTrigger value="buy" className="tab-buy font-bold text-base sm:text-sm h-12 sm:h-auto">Buy</TabsTrigger>
+              <TabsTrigger value="sell" className="tab-sell font-bold text-base sm:text-sm h-12 sm:h-auto" disabled={!tokenHolding || tokenBalance <= 0}>Sell</TabsTrigger>
+            </TabsList>
 
-          {/* Repeat Last Trade */}
-          {lastTrade && (
-            <div className="mt-3">
-              <Button
-                variant="outline" size="sm"
-                className="w-full border-primary/30 hover:bg-primary/10 text-xs"
-                onClick={() => {
-                  if (lastTrade.side === 'buy') {
-                    const solAmount = lastTrade.amount * solPrice / (tokenDetails?.price || 1)
-                    setSelectedSolAmount(solAmount)
-                    setCustomSolAmount("")
-                  } else if (tokenHolding) {
-                    const percentage = (lastTrade.amount / parseFloat(tokenHolding.qty)) * 100
-                    setSelectedPercentage(Math.min(100, Math.round(percentage)))
+            {/* Repeat Last Trade */}
+            {lastTrade && (
+              <div className="mt-3">
+                <Button
+                  variant="outline" size="sm"
+                  className="w-full border-primary/30 hover:bg-primary/10 text-xs"
+                  onClick={() => {
+                    if (lastTrade.side === 'buy') {
+                      const solAmount = lastTrade.amount * solPrice / (tokenDetails?.price || 1)
+                      setSelectedSolAmount(solAmount)
+                      setCustomSolAmount("")
+                    } else if (tokenHolding) {
+                      const percentage = (lastTrade.amount / parseFloat(tokenHolding.qty)) * 100
+                      setSelectedPercentage(Math.min(100, Math.round(percentage)))
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3 mr-2" />
+                  Repeat Last {lastTrade.side === 'buy' ? 'Buy' : 'Sell'}
+                </Button>
+              </div>
+            )}
+
+            <TabsContent value="buy">
+              <BuyOrderForm
+                tokenSymbol={tokenDetails.tokenSymbol}
+                currentPrice={currentPrice}
+                solPrice={solPrice}
+                balance={balance}
+                marketCap={tokenDetails.marketCap}
+                isTrading={isTrading}
+                isRefreshing={isRefreshing}
+                selectedSolAmount={selectedSolAmount}
+                customSolAmount={customSolAmount}
+                showCustomInput={showCustomInput}
+                onSelectSolAmount={(amount) => { setSelectedSolAmount(amount); setCustomSolAmount("") }}
+                onCustomSolAmountChange={(val) => { setCustomSolAmount(val); setSelectedSolAmount(null) }}
+                onToggleCustomInput={() => setShowCustomInput(!showCustomInput)}
+                onTrade={() => handleTrade('buy')}
+              />
+            </TabsContent>
+
+            <TabsContent value="sell">
+              <SellOrderForm
+                tokenSymbol={tokenDetails.tokenSymbol}
+                currentPrice={currentPrice}
+                solPrice={solPrice}
+                tokenBalance={tokenBalance}
+                tokenHolding={tokenHolding}
+                isTrading={isTrading}
+                isRefreshing={isRefreshing}
+                portfolioLoading={portfolioLoading}
+                portfolioError={portfolioError}
+                selectedPercentage={selectedPercentage}
+                customSellPercentage={customSellPercentage}
+                onSelectPercentage={(p) => { setSelectedPercentage(p); setCustomSellPercentage("") }}
+                onCustomPercentageChange={(val) => {
+                  setCustomSellPercentage(val)
+                  if (val && !isNaN(parseFloat(val))) {
+                    setSelectedPercentage(Math.min(100, Math.max(0, parseFloat(val))))
                   }
                 }}
-              >
-                <RefreshCw className="h-3 w-3 mr-2" />
-                Repeat Last {lastTrade.side === 'buy' ? 'Buy' : 'Sell'}
-              </Button>
-            </div>
-          )}
-
-          <TabsContent value="buy">
-            <BuyOrderForm
-              tokenSymbol={tokenDetails.tokenSymbol}
-              currentPrice={currentPrice}
-              solPrice={solPrice}
-              balance={balance}
-              marketCap={tokenDetails.marketCap}
-              isTrading={isTrading}
-              isRefreshing={isRefreshing}
-              selectedSolAmount={selectedSolAmount}
-              customSolAmount={customSolAmount}
-              showCustomInput={showCustomInput}
-              onSelectSolAmount={(amount) => { setSelectedSolAmount(amount); setCustomSolAmount("") }}
-              onCustomSolAmountChange={(val) => { setCustomSolAmount(val); setSelectedSolAmount(null) }}
-              onToggleCustomInput={() => setShowCustomInput(!showCustomInput)}
-              onTrade={() => handleTrade('buy')}
+                onRefreshPortfolio={() => refreshPortfolio()}
+                onRefreshToken={() => loadTokenDetails(true)}
+                onTrade={() => handleTrade('sell')}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="pt-2">
+            <AuthCTA
+              variant="inline"
+              message="Sign in to Trade"
+              icon={<Wallet className="h-5 w-5" />}
             />
-          </TabsContent>
-
-          <TabsContent value="sell">
-            <SellOrderForm
-              tokenSymbol={tokenDetails.tokenSymbol}
-              currentPrice={currentPrice}
-              solPrice={solPrice}
-              tokenBalance={tokenBalance}
-              tokenHolding={tokenHolding}
-              isTrading={isTrading}
-              isRefreshing={isRefreshing}
-              portfolioLoading={portfolioLoading}
-              portfolioError={portfolioError}
-              selectedPercentage={selectedPercentage}
-              customSellPercentage={customSellPercentage}
-              onSelectPercentage={(p) => { setSelectedPercentage(p); setCustomSellPercentage("") }}
-              onCustomPercentageChange={(val) => {
-                setCustomSellPercentage(val)
-                if (val && !isNaN(parseFloat(val))) {
-                  setSelectedPercentage(Math.min(100, Math.max(0, parseFloat(val))))
-                }
-              }}
-              onRefreshPortfolio={() => refreshPortfolio()}
-              onRefreshToken={() => loadTokenDetails(true)}
-              onTrade={() => handleTrade('sell')}
-            />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
 
         <ScreenReaderAnnouncements politeMessage={announcement} urgentMessage={urgentAnnouncement} />
       </div>

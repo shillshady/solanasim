@@ -8,6 +8,9 @@
 import prisma from '../plugins/prisma.js';
 import { NotificationType, NotificationCategory } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.notification;
 
 interface NotificationMetadata {
   tokenSymbol?: string;
@@ -59,7 +62,7 @@ export async function createNotification(params: CreateNotificationParams) {
 
     return notification;
   } catch (error) {
-    console.error('Failed to create notification:', error);
+    logger.error({ userId, type, category, err: error }, "Failed to create notification");
     return null;
   }
 }

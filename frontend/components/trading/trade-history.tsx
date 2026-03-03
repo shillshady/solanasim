@@ -10,6 +10,7 @@ import Link from "next/link"
 import { AnimatedNumber } from "@/components/ui/animated-number"
 import { useAuth } from "@/hooks/use-auth"
 import { usePriceStreamContext } from "@/lib/price-stream-provider"
+import { AuthCTA } from "@/components/auth/auth-cta"
 import * as api from "@/lib/api"
 
 // ✅ Import standardized table cells instead of manual formatting

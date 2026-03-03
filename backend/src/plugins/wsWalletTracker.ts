@@ -3,6 +3,9 @@ import { FastifyInstance } from "fastify";
 import { WebSocket } from "ws";
 import prisma from "./prisma.js";
 import { WalletActivityService } from "../services/walletActivityService.js";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.websocket;
 
 interface WalletTrackerClient {
   ws: WebSocket;
@@ -148,7 +151,7 @@ async function handleAuth(clientId: string, userId: string) {
       }
     }
   } catch (error) {
-    console.error(`Auth error for ${clientId}:`, error);
+    logger.error({ clientId, err: error }, "Auth error for wallet tracker client");
     client.ws.send(JSON.stringify({
       type: "error",
       message: "Authentication failed"
@@ -249,7 +252,7 @@ function broadcastActivities(walletAddress: string, activities: any[]) {
           activities: formattedActivities
         }));
       } catch (error) {
-        console.error(`Failed to send activities to client:`, error);
+        logger.error({ walletAddress, err: error }, "Failed to send activities to client");
       }
     }
   });

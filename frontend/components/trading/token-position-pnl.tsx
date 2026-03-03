@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 import { formatDistanceToNow } from "date-fns"
 import { SharePnLDialog } from "@/components/modals/share-pnl-dialog"
+import { AuthCTA } from "@/components/auth/auth-cta"
 
 interface TokenPositionPnLProps {
   tokenAddress: string
@@ -273,6 +274,17 @@ export function TokenPositionPnL({ tokenAddress, tokenSymbol, tokenName }: Token
     } finally {
       setIsRefreshing(false)
     }
+  }
+
+  // Guest state — show sign-in CTA
+  if (!user) {
+    return (
+      <AuthCTA
+        variant="banner"
+        message="Sign in to track your P&L"
+        icon={<TrendingUp className="h-5 w-5" />}
+      />
+    )
   }
 
   // Loading state
