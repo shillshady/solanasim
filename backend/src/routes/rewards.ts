@@ -1,18 +1,19 @@
 // Rewards routes for VSOL token claims
 import { FastifyInstance } from "fastify";
 import prisma from "../plugins/prisma.js";
+import { authenticateToken, type AuthenticatedRequest } from "../plugins/auth.js";
 
 export default async function rewardsRoutes(app: FastifyInstance) {
   // Claim VSOL rewards
-  app.post("/claim", async (req, reply) => {
-    const { userId, epoch, wallet } = req.body as {
-      userId: string;
+  app.post("/claim", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+    const { epoch, wallet } = req.body as {
       epoch: number;
       wallet: string;
     };
-    
-    if (!userId || !epoch || !wallet) {
-      return reply.code(400).send({ error: "userId, epoch, and wallet required" });
+
+    if (!epoch || !wallet) {
+      return reply.code(400).send({ error: "epoch and wallet required" });
     }
     
     try {
@@ -94,8 +95,8 @@ export default async function rewardsRoutes(app: FastifyInstance) {
   });
 
   // Get user's reward claims
-  app.get("/claims/:userId", async (req, reply) => {
-    const { userId } = req.params as { userId: string };
+  app.get("/claims/:userId", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
     
     try {
       const claims = await prisma.rewardClaim.findMany({

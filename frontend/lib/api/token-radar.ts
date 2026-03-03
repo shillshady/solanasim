@@ -11,22 +11,7 @@ import type {
   UpdateWatchRequest,
   FeedFilters,
 } from "@/lib/types/token-radar"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-
-// Helper to get authorization headers
-function getAuthHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
+import { API as API_BASE_URL, getAuthHeaders } from './client'
 
 /**
  * Get token discovery feed (bonded, graduating, new)
