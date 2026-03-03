@@ -4,12 +4,6 @@ databases:
     databaseName: solanasim
     user: solanasim
 
-  - name: solanasim-redis
-    plan: starter
-    type: redis
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
-
 services:
   - type: web
     name: solanasim-api
@@ -27,10 +21,7 @@ services:
           name: solanasim-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: solanasim-redis
-          type: redis
-          property: connectionString
+        value: ""
       - key: JWT_SECRET
         value: 8edrYprHwdl6TARy/mFu4P44cPDOk/8ZIQ6tmDXDcnc=
       - key: HELIUS_API
@@ -65,10 +56,7 @@ services:
           name: solanasim-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: solanasim-redis
-          type: redis
-          property: connectionString
+        value: ""
       - key: HELIUS_API
         value: 0e492ad2-d236-41dc-97e0-860d712bc03d
       - key: HELIUS_WS
