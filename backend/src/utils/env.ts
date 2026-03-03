@@ -11,8 +11,8 @@ const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-  // Redis
-  REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+  // Redis (optional - app degrades gracefully without it)
+  REDIS_URL: z.string().optional(),
 
   // Security - NO FALLBACKS IN PRODUCTION
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
@@ -90,7 +90,7 @@ export function validateEnvironment(): EnvConfig {
       PORT: parsed.PORT,
       LOG_LEVEL: parsed.LOG_LEVEL,
       DATABASE_URL: '***configured***',
-      REDIS_URL: '***configured***',
+      REDIS_URL: parsed.REDIS_URL ? '***configured***' : 'not configured',
       JWT_SECRET: '***configured***',
       HELIUS_API: parsed.HELIUS_API ? '***configured***' : 'not configured',
       SENTRY_DSN: parsed.SENTRY_DSN ? '***configured***' : 'not configured',
