@@ -20,6 +20,7 @@ import { usePortfolio } from "@/hooks/use-portfolio"
 import { formatNumber, formatUSD } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { EmailVerificationBanner } from "@/components/auth/email-verification-banner"
+import { AuthCTA } from "@/components/auth/auth-cta"
 
 export function RewardsOverview() {
   const { toast } = useToast()

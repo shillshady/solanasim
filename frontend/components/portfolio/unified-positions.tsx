@@ -358,23 +358,13 @@ export const UnifiedPositions = memo(function UnifiedPositions({
   // Auth guard
   if (!isAuthenticated) {
     return (
-      <Card className={cn("border border-border", className)}>
-        {showHeader && (
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">
-              {variant === 'compact' ? 'Holdings' : 'Portfolio Positions'}
-            </CardTitle>
-          </CardHeader>
-        )}
-        <CardContent className={showHeader ? "pt-0" : undefined}>
-          <div className="text-center py-6">
-            <Wallet className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Sign in to view your {variant === 'compact' ? 'holdings' : 'portfolio'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <AuthCTA
+        variant="card"
+        message={`Sign in to view your ${variant === 'compact' ? 'holdings' : 'portfolio positions'}`}
+        description="Track your token positions, unrealized P&L, and portfolio value in real time."
+        icon={<Wallet className="h-6 w-6" />}
+        className={className}
+      />
     )
   }
 
