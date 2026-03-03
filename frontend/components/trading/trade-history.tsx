@@ -43,7 +43,6 @@ export function TradeHistory({
   // Load trade history from actual backend API
   const loadTrades = useCallback(async () => {
     if (!isAuthenticated || !user) {
-      setError("Please login to view trade history")
       setIsLoading(false)
       return
     }
@@ -88,6 +87,19 @@ export function TradeHistory({
     if (diffMins < 60) return `${diffMins}m ago`
     if (diffHours < 24) return `${diffHours}h ago`
     return `${diffDays}d ago`
+  }
+
+  // Guest state — show sign-in CTA
+  if (!isAuthenticated) {
+    const ctaContent = (
+      <AuthCTA
+        variant="card"
+        message="Sign in to view trade history"
+        description="Track all your buys, sells, and realized P&L."
+        icon={<TrendingUp className="h-6 w-6" />}
+      />
+    )
+    return noCard ? ctaContent : ctaContent
   }
 
   if (isLoading) {

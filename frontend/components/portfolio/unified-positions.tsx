@@ -40,6 +40,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { usePortfolio } from "@/hooks/use-portfolio"
 import { cn } from "@/lib/utils"
 import { ProfitLossValue, PortfolioValue } from "@/components/ui/financial-value"
+import { AuthCTA } from "@/components/auth/auth-cta"
 import type { EnhancedPosition } from "./types"
 
 // Enhanced position with live price data for display
