@@ -188,11 +188,14 @@ async function performHealthCheck(detailed: boolean = false): Promise<HealthChec
   const [database, redisHealth, priceServiceHealth, memory] = checks;
 
   // Determine overall status
+  // Redis is non-critical - treat as degraded, not unhealthy
   let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+  const criticalChecks = [database, memory];
+  const nonCriticalChecks = [redisHealth, priceServiceHealth];
 
-  if (checks.some(c => c.status === 'down')) {
+  if (criticalChecks.some(c => c.status === 'down')) {
     overallStatus = 'unhealthy';
-  } else if (checks.some(c => c.status === 'degraded')) {
+  } else if (nonCriticalChecks.some(c => c.status === 'down') || checks.some(c => c.status === 'degraded')) {
     overallStatus = 'degraded';
   }
 
@@ -278,18 +281,16 @@ export default async function healthPlugin(app: FastifyInstance) {
   // Readiness probe for Kubernetes/Docker
   app.get('/health/ready', async (request, reply) => {
     try {
-      // Quick check of critical components only
+      // Only check critical components - Redis is optional
       const dbCheck = await checkDatabase();
-      const redisCheck = await checkRedis();
 
-      if (dbCheck.status === 'up' && redisCheck.status === 'up') {
+      if (dbCheck.status === 'up') {
         return reply.code(200).send({ status: 'ready' });
       }
 
       return reply.code(503).send({
         status: 'not ready',
-        database: dbCheck.status,
-        redis: redisCheck.status
+        database: dbCheck.status
       });
     } catch (error) {
       return reply.code(503).send({ status: 'not ready' });
