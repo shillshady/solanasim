@@ -74,7 +74,7 @@ export default async function searchRoutes(app: FastifyInstance) {
         priceChange24h: tokenInfo.priceChange24h,
         marketCapUsd: tokenInfo.marketCapUsd,
         liquidityUsd: tokenInfo.liquidityUsd,
-        holderCount: tokenInfo.holderCount,
+        holderCount: tokenInfo.holderCount != null ? Number(tokenInfo.holderCount) : null,
         firstSeenAt: tokenInfo.firstSeenAt,
         isNew: tokenInfo.isNew,
         isTrending: tokenInfo.isTrending,
