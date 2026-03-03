@@ -8,6 +8,7 @@ import { QueryProvider } from "@/lib/query-provider"
 import { PriceStreamProvider } from "@/lib/price-stream-provider"
 import { SolanaWalletProvider } from "@/lib/solana-wallet-provider"
 import { NotificationProvider } from "@/components/shared/enhanced-notifications"
+import { AuthProvider } from "@/hooks/use-auth"
 // PWA features removed for now
 
 interface AppProvidersProps {
@@ -31,20 +32,22 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <GlobalErrorBoundary>
       <QueryProvider>
-        <SolanaWalletProvider>
-          <PriceStreamProvider>
-            <NotificationProvider>
-              <ThemeProvider
+        <AuthProvider>
+          <SolanaWalletProvider>
+            <PriceStreamProvider>
+              <NotificationProvider>
+                <ThemeProvider
                 attribute="class"
                 defaultTheme="dark"
                 enableSystem
                 disableTransitionOnChange
               >
                 {children}
-              </ThemeProvider>
-            </NotificationProvider>
-          </PriceStreamProvider>
-        </SolanaWalletProvider>
+                </ThemeProvider>
+              </NotificationProvider>
+            </PriceStreamProvider>
+          </SolanaWalletProvider>
+        </AuthProvider>
       </QueryProvider>
     </GlobalErrorBoundary>
   )

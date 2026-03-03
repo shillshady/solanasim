@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/api'
-import type { User } from '@/lib/types/backend'
 import { isTokenValid } from '@/lib/jwt-utils'
+import { errorLogger } from '@/lib/error-logger'
 
-// Simplified user type for authentication context
 interface AuthUser {
   id: string
   email: string
@@ -23,7 +22,34 @@ interface AuthState {
   isAuthenticated: boolean
 }
 
-export function useAuth() {
+interface AuthContextValue extends AuthState {
+  login: (email: string, password: string) => Promise<any>
+  signup: (email: string, password: string, username?: string) => Promise<any>
+  logout: () => void
+  updateProfile: (updates: {
+    handle?: string
+    profileImage?: string
+    bio?: string
+    displayName?: string
+    avatar?: string
+    twitter?: string
+    discord?: string
+    telegram?: string
+    website?: string
+  }) => Promise<void>
+  getUserId: () => string | null
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+function clearAuthStorage() {
+  localStorage.removeItem('userId')
+  localStorage.removeItem('user')
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -31,7 +57,6 @@ export function useAuth() {
     isAuthenticated: false
   })
 
-  // Load user from localStorage on mount with token validation
   useEffect(() => {
     const savedUserId = localStorage.getItem('userId')
     const savedUser = localStorage.getItem('user')
@@ -39,23 +64,13 @@ export function useAuth() {
 
     if (savedUserId && savedUser && accessToken) {
       try {
-        // Validate token before setting auth state
         if (!isTokenValid(accessToken)) {
-          console.log('[Auth] Token expired, clearing session')
-          // Token expired - clear all auth data
-          localStorage.removeItem('userId')
-          localStorage.removeItem('user')
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          setAuthState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false
-          })
+          errorLogger.info('Token expired, clearing session', { component: 'useAuth' })
+          clearAuthStorage()
+          setAuthState({ user: null, isLoading: false, isAuthenticated: false })
           return
         }
 
-        // Token is valid - restore session
         const user = JSON.parse(savedUser)
         setAuthState({
           user: { id: savedUserId, ...user },
@@ -63,22 +78,21 @@ export function useAuth() {
           isAuthenticated: true
         })
       } catch (error) {
-        console.error('[Auth] Error validating token:', error)
-        // Clear invalid data
-        localStorage.removeItem('userId')
-        localStorage.removeItem('user')
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false
-        })
+        errorLogger.error('Error validating token', { error: error as Error, component: 'useAuth' })
+        clearAuthStorage()
+        setAuthState({ user: null, isLoading: false, isAuthenticated: false })
       }
     } else {
       setAuthState(prev => ({ ...prev, isLoading: false }))
     }
   }, [])
+
+  const invalidateUserQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    queryClient.invalidateQueries({ queryKey: ['balance'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['notes'] })
+  }, [queryClient])
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await api.loginEmail({ email, password })
@@ -90,28 +104,17 @@ export function useAuth() {
 
     localStorage.setItem('userId', response.userId)
     localStorage.setItem('user', JSON.stringify(user))
-    // Store access token for authenticated API calls
     if (response.accessToken) {
       localStorage.setItem('accessToken', response.accessToken)
     }
 
-    // Force a synchronous state update to ensure UI re-renders immediately
     flushSync(() => {
-      setAuthState({
-        user,
-        isLoading: false,
-        isAuthenticated: true
-      })
+      setAuthState({ user, isLoading: false, isAuthenticated: true })
     })
 
-    // Invalidate all user-specific queries after login
-    queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-    queryClient.invalidateQueries({ queryKey: ['balance'] })
-    queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    queryClient.invalidateQueries({ queryKey: ['notes'] })
-
+    invalidateUserQueries()
     return response
-  }, [queryClient])
+  }, [invalidateUserQueries])
 
   const signup = useCallback(async (email: string, password: string, username?: string) => {
     const response = await api.signupEmail({ email, password, username })
@@ -124,72 +127,50 @@ export function useAuth() {
 
     localStorage.setItem('userId', response.userId)
     localStorage.setItem('user', JSON.stringify(user))
-    // Store access token for authenticated API calls
     if (response.accessToken) {
       localStorage.setItem('accessToken', response.accessToken)
     }
 
-    // Force a synchronous state update to ensure UI re-renders immediately
     flushSync(() => {
-      setAuthState({
-        user,
-        isLoading: false,
-        isAuthenticated: true
-      })
+      setAuthState({ user, isLoading: false, isAuthenticated: true })
     })
 
-    // Invalidate all user-specific queries after signup
-    queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-    queryClient.invalidateQueries({ queryKey: ['balance'] })
-    queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    queryClient.invalidateQueries({ queryKey: ['notes'] })
-
+    invalidateUserQueries()
     return response
-  }, [queryClient])
+  }, [invalidateUserQueries])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('userId')
-    localStorage.removeItem('user')
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-
-    setAuthState({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false
-    })
+    clearAuthStorage()
+    setAuthState({ user: null, isLoading: false, isAuthenticated: false })
   }, [])
 
-  const updateProfile = useCallback(async (updates: { 
-    handle?: string; 
-    profileImage?: string; 
-    bio?: string;
-    displayName?: string;
-    avatar?: string;
-    twitter?: string;
-    discord?: string;
-    telegram?: string;
-    website?: string;
+  const updateProfile = useCallback(async (updates: {
+    handle?: string
+    profileImage?: string
+    bio?: string
+    displayName?: string
+    avatar?: string
+    twitter?: string
+    discord?: string
+    telegram?: string
+    website?: string
   }) => {
     if (!authState.user) throw new Error('Not authenticated')
-    
+
     await api.updateProfile({
       userId: authState.user.id,
       handle: updates.handle,
       profileImage: updates.profileImage,
       bio: updates.bio,
     })
-    
+
     const updatedUser = { ...authState.user, ...updates }
     localStorage.setItem('user', JSON.stringify(updatedUser))
-    
-    setAuthState(prev => ({
-      ...prev,
-      user: updatedUser
-    }))
+
+    setAuthState(prev => ({ ...prev, user: updatedUser }))
   }, [authState.user])
 
-  return {
+  const value: AuthContextValue = {
     ...authState,
     login,
     signup,
@@ -197,4 +178,14 @@ export function useAuth() {
     updateProfile,
     getUserId: () => authState.user?.id || null
   }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
 }
