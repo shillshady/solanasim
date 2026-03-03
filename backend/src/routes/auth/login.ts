@@ -25,24 +25,28 @@ export default async function loginRoutes(app: FastifyInstance) {
       const lockoutKey = `lockout:${email}`;
       const failedAttemptsKey = `failed_attempts:${email}`;
 
-      const isLockedOut = await redis.get(lockoutKey);
-      if (isLockedOut) {
-        const ttl = await redis.ttl(lockoutKey);
-        return reply.code(429).send({
-          error: "ACCOUNT_LOCKED",
-          message: `Too many failed login attempts. Please try again in ${Math.ceil(ttl / 60)} minutes.`
-        });
-      }
+      // Check lockout (skip if Redis unavailable)
+      try {
+        const isLockedOut = await redis.get(lockoutKey);
+        if (isLockedOut) {
+          const ttl = await redis.ttl(lockoutKey);
+          return reply.code(429).send({
+            error: "ACCOUNT_LOCKED",
+            message: `Too many failed login attempts. Please try again in ${Math.ceil(ttl / 60)} minutes.`
+          });
+        }
+      } catch { /* Redis unavailable - skip lockout check */ }
 
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user || !user.passwordHash) {
-        const attempts = await redis.incr(failedAttemptsKey);
-        await redis.expire(failedAttemptsKey, 900);
-
-        if (attempts >= 5) {
-          await redis.setex(lockoutKey, 900, '1');
-          await redis.del(failedAttemptsKey);
-        }
+        try {
+          const attempts = await redis.incr(failedAttemptsKey);
+          await redis.expire(failedAttemptsKey, 900);
+          if (attempts >= 5) {
+            await redis.setex(lockoutKey, 900, '1');
+            await redis.del(failedAttemptsKey);
+          }
+        } catch { /* Redis unavailable - skip rate limiting */ }
 
         return reply.code(401).send({
           error: "INVALID_CREDENTIALS",
@@ -52,19 +56,19 @@ export default async function loginRoutes(app: FastifyInstance) {
 
       const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
-        const attempts = await redis.incr(failedAttemptsKey);
-        await redis.expire(failedAttemptsKey, 900);
-
-        if (attempts >= 5) {
-          await redis.setex(lockoutKey, 900, '1');
-          await redis.del(failedAttemptsKey);
-          logger.warn({ email }, "Account locked due to failed attempts");
-
-          return reply.code(429).send({
-            error: "ACCOUNT_LOCKED",
-            message: "Too many failed login attempts. Your account has been locked for 15 minutes."
-          });
-        }
+        try {
+          const attempts = await redis.incr(failedAttemptsKey);
+          await redis.expire(failedAttemptsKey, 900);
+          if (attempts >= 5) {
+            await redis.setex(lockoutKey, 900, '1');
+            await redis.del(failedAttemptsKey);
+            logger.warn({ email }, "Account locked due to failed attempts");
+            return reply.code(429).send({
+              error: "ACCOUNT_LOCKED",
+              message: "Too many failed login attempts. Your account has been locked for 15 minutes."
+            });
+          }
+        } catch { /* Redis unavailable - skip rate limiting */ }
 
         return reply.code(401).send({
           error: "INVALID_CREDENTIALS",
@@ -72,8 +76,10 @@ export default async function loginRoutes(app: FastifyInstance) {
         });
       }
 
-      await redis.del(failedAttemptsKey);
-      await redis.del(lockoutKey);
+      try {
+        await redis.del(failedAttemptsKey);
+        await redis.del(lockoutKey);
+      } catch { /* Redis unavailable */ }
 
       const sessionId = await AuthService.createSession(user.id, user.userTier, {
         loginMethod: 'email',
