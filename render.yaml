@@ -39,7 +39,7 @@ services:
       - key: JUPITER_BASE
         value: https://quote-api.jup.ag
       - key: FRONTEND_URL
-        value: https://www.starsol.fun/
+        value: https://www.solsim.fun
 
   - type: worker
     name: solanasim-worker

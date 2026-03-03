@@ -127,9 +127,12 @@ app.register(helmet, {
 // CORS for frontend - support multiple origins with WebSocket support
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://solsim.fun",
+  "https://www.solsim.fun",
   "https://solanasim.fun",
   "https://www.solanasim.fun",
-  "https://solanasim-production.vercel.app", // Add your Vercel deployment URL
+  "https://starsol.fun",
+  "https://www.starsol.fun",
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
@@ -146,14 +149,14 @@ app.register(cors, {
       return cb(null, true);
     }
 
-    // Allow any subdomain of solanasim.fun in production
-    if (origin.endsWith('.solanasim.fun') || origin === 'https://solanasim.fun') {
-      logger.debug({ origin }, 'CORS accepted (solanasim.fun domain)');
+    // Allow any subdomain of our domains
+    if (origin.endsWith('.solsim.fun') || origin.endsWith('.solanasim.fun') || origin.endsWith('.starsol.fun')) {
+      logger.debug({ origin }, 'CORS accepted (known domain)');
       return cb(null, true);
     }
 
     // Allow Vercel preview deployments (project-specific only)
-    if (origin.match(/^https:\/\/solanasim[a-z0-9-]*\.vercel\.app$/)) {
+    if (origin.match(/^https:\/\/solsim[a-z0-9-]*\.vercel\.app$/)) {
       logger.debug({ origin }, 'CORS accepted (Vercel deployment)');
       return cb(null, true);
     }
