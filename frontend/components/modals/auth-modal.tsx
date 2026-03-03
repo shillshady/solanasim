@@ -85,11 +85,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
         >
           <div className="relative group">
-            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-teal-500/20 via-purple-500/15 to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-amber-400/15 via-orange-300/10 to-amber-400/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <FloatingParticles />
 
             <div className="relative bg-[var(--background)] dark:bg-[var(--background)]/95 backdrop-blur-xl rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
 
               {/* Close button */}
               <button
@@ -112,11 +112,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                   transition={{ duration: 0.4, delay: 0.08 }}
                 >
                   <motion.div
-                    className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/20 to-purple-500/15 border border-teal-500/20 mb-4"
+                    className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-400/15 border border-amber-400/20 mb-4"
                     whileHover={{ scale: 1.05, rotate: 5 }}
                     transition={{ type: "spring", stiffness: 400 }}
                   >
-                    <TrendingUp className="w-6 h-6 text-teal-400" />
+                    <TrendingUp className="w-6 h-6 text-amber-300" />
                   </motion.div>
 
                   <AnimatePresence mode="wait">

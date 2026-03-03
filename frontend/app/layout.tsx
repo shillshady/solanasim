@@ -31,7 +31,13 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Solana Sim - Solana Paper Trading",
   description: "Practice Solana trading without risk. Real-time market data, zero financial risk.",
-  generator: "v0.app",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.svg", sizes: "32x32", type: "image/svg+xml" },
+      { url: "/solana-sim-logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.svg",
+  },
 }
 
 export const viewport = {

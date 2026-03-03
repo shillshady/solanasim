@@ -53,9 +53,9 @@ export const itemVariants: Variants = {
 /*  Shared input classes                                               */
 /* ------------------------------------------------------------------ */
 
-export const INPUT_CLASSES = "w-full h-11 pl-10 pr-4 bg-[var(--card)]/50 border border-[var(--border)] rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all duration-200"
+export const INPUT_CLASSES = "w-full h-11 pl-10 pr-4 bg-[var(--card)]/50 border border-[var(--border)] rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/25 transition-all duration-200"
 
-export const INPUT_WITH_TOGGLE_CLASSES = "w-full h-11 pl-10 pr-11 bg-[var(--card)]/50 border border-[var(--border)] rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all duration-200"
+export const INPUT_WITH_TOGGLE_CLASSES = "w-full h-11 pl-10 pr-11 bg-[var(--card)]/50 border border-[var(--border)] rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/25 transition-all duration-200"
 
 /* ------------------------------------------------------------------ */
 /*  Floating particles background                                      */
@@ -70,8 +70,8 @@ export function FloatingParticles() {
           className="absolute w-1 h-1 rounded-full"
           style={{
             background: i % 2 === 0
-              ? "rgba(45, 212, 191, 0.35)"
-              : "rgba(168, 85, 247, 0.35)",
+              ? "rgba(251, 191, 36, 0.35)"
+              : "rgba(251, 146, 60, 0.35)",
             left: `${15 + i * 22}%`,
             top: `${8 + i * 18}%`,
           }}
@@ -111,7 +111,7 @@ export function AnimatedInput({
 }) {
   return (
     <div className="relative group/input">
-      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-teal-400 transition-colors duration-200 z-10 pointer-events-none" />
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-amber-300 transition-colors duration-200 z-10 pointer-events-none" />
       <div
         onFocus={() => onFocusChange(fieldName)}
         onBlur={() => onFocusChange(null)}
@@ -120,7 +120,7 @@ export function AnimatedInput({
       </div>
       {focusedField === fieldName && (
         <motion.div
-          className="absolute inset-0 rounded-xl border border-teal-500/30 pointer-events-none"
+          className="absolute inset-0 rounded-xl border border-amber-400/30 pointer-events-none"
           layoutId="auth-focus-ring"
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
@@ -146,7 +146,7 @@ export function GradientSubmitButton({
     <motion.button
       type="submit"
       disabled={isLoading}
-      className="relative w-full h-11 bg-gradient-to-r from-teal-600 to-purple-600 text-white font-medium rounded-xl overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+      className="relative w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-xl overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
       whileHover={isLoading ? {} : { scale: 1.01 }}
       whileTap={isLoading ? {} : { scale: 0.99 }}
     >
@@ -162,7 +162,7 @@ export function GradientSubmitButton({
         )}
       </span>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-teal-500 to-purple-500"
+        className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-400"
         initial={{ opacity: 0 }}
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.3 }}

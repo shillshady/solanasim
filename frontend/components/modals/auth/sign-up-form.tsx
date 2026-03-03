@@ -111,7 +111,7 @@ export function SignUpForm({
           Password
         </label>
         <div className="relative group/input">
-          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-teal-400 transition-colors duration-200 z-10 pointer-events-none" />
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-amber-300 transition-colors duration-200 z-10 pointer-events-none" />
           <div
             onFocus={() => onFocusChange("register-password")}
             onBlur={() => onFocusChange(null)}
@@ -149,7 +149,7 @@ export function SignUpForm({
           </button>
           {focusedField === "register-password" && (
             <motion.div
-              className="absolute inset-0 rounded-xl border border-teal-500/30 pointer-events-none"
+              className="absolute inset-0 rounded-xl border border-amber-400/30 pointer-events-none"
               layoutId="auth-focus-ring"
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
@@ -163,7 +163,7 @@ export function SignUpForm({
           Confirm Password
         </label>
         <div className="relative group/input">
-          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-teal-400 transition-colors duration-200 z-10 pointer-events-none" />
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-amber-300 transition-colors duration-200 z-10 pointer-events-none" />
           <div
             onFocus={() => onFocusChange("register-confirm")}
             onBlur={() => onFocusChange(null)}
@@ -200,7 +200,7 @@ export function SignUpForm({
           </button>
           {focusedField === "register-confirm" && (
             <motion.div
-              className="absolute inset-0 rounded-xl border border-teal-500/30 pointer-events-none"
+              className="absolute inset-0 rounded-xl border border-amber-400/30 pointer-events-none"
               layoutId="auth-focus-ring"
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
@@ -286,7 +286,7 @@ export function SignUpForm({
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="text-teal-500 hover:text-teal-400 font-medium transition-colors"
+          className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
         >
           Sign in
         </button>

@@ -77,7 +77,7 @@ class AuthService {
     }
   }
 
-  // Create session in Redis
+  // Create session in Redis (degrades gracefully without Redis)
   static async createSession(userId: string, userTier: string, metadata?: any) {
     const sessionId = `session_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const sessionData = {
@@ -88,34 +88,43 @@ class AuthService {
       ...metadata
     };
 
-    // Store session in Redis with 7 day expiry
-    await redis.setex(`session:${sessionId}`, 7 * 24 * 60 * 60, JSON.stringify(sessionData));
-    
+    try {
+      await redis.setex(`session:${sessionId}`, 7 * 24 * 60 * 60, JSON.stringify(sessionData));
+    } catch {
+      // Redis unavailable - session won't be tracked but auth still works via JWT
+    }
+
     return sessionId;
   }
 
-  // Validate session exists and is active
+  // Validate session exists and is active (returns true if Redis unavailable - JWT is still valid)
   static async validateSession(sessionId: string): Promise<boolean> {
-    const sessionData = await redis.get(`session:${sessionId}`);
-    if (!sessionData) return false;
+    try {
+      const sessionData = await redis.get(`session:${sessionId}`);
+      if (!sessionData) return false;
 
-    // Update last activity
-    const session = JSON.parse(sessionData);
-    session.lastActivity = new Date().toISOString();
-    await redis.setex(`session:${sessionId}`, 7 * 24 * 60 * 60, JSON.stringify(session));
-    
-    return true;
+      const session = JSON.parse(sessionData);
+      session.lastActivity = new Date().toISOString();
+      await redis.setex(`session:${sessionId}`, 7 * 24 * 60 * 60, JSON.stringify(session));
+
+      return true;
+    } catch {
+      // Redis unavailable - trust the JWT
+      return true;
+    }
   }
 
   // Invalidate session
   static async invalidateSession(sessionId: string): Promise<void> {
-    await redis.del(`session:${sessionId}`);
+    try { await redis.del(`session:${sessionId}`); } catch { /* Redis unavailable */ }
   }
 
   // Invalidate all user sessions
   static async invalidateAllUserSessions(userId: string): Promise<void> {
-    const { scanAndDelete } = await import("../utils/redis-helpers.js");
-    await scanAndDelete(`session:session_${userId}_*`);
+    try {
+      const { scanAndDelete } = await import("../utils/redis-helpers.js");
+      await scanAndDelete(`session:session_${userId}_*`);
+    } catch { /* Redis unavailable */ }
   }
 }
 
