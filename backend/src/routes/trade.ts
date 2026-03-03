@@ -3,21 +3,22 @@ import { FastifyInstance } from "fastify";
 import { fillTrade } from "../services/tradeService.js";
 import priceService from "../plugins/priceService.js";
 import prisma from "../plugins/prisma.js";
+import { authenticateToken, type AuthenticatedRequest } from "../plugins/auth.js";
 
 export default async function (app: FastifyInstance) {
   // Execute a trade
-  app.post("/", async (req, reply) => {
-    const { userId, mint, side, qty } = req.body as {
-      userId: string;
+  app.post("/", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+    const { mint, side, qty } = req.body as {
       mint: string;
       side: "BUY" | "SELL";
       qty: string;
     };
 
     // Validation
-    if (!userId || !mint || !side || !qty) {
-      return reply.code(400).send({ 
-        error: "Missing required fields: userId, mint, side, qty" 
+    if (!mint || !side || !qty) {
+      return reply.code(400).send({
+        error: "Missing required fields: mint, side, qty"
       });
     }
 
@@ -94,8 +95,8 @@ export default async function (app: FastifyInstance) {
   });
 
   // Get trade history for a user
-  app.get("/history/:userId", async (req, reply) => {
-    const { userId } = req.params as { userId: string };
+  app.get("/history/:userId", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
     const { limit = "50", offset = "0", mint } = req.query as {
       limit?: string;
       offset?: string;

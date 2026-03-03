@@ -1,5 +1,8 @@
 // Prisma client singleton with connection pooling for production scale
 import { PrismaClient } from "@prisma/client";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.database;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -66,10 +69,10 @@ prisma.$use(async (params, next) => {
   const utilization = activeConnections / config.connection_limit;
 
   if (utilization > 0.8) {
-    console.error(`🚨 CRITICAL DB CONNECTION ALERT: ${activeConnections}/${config.connection_limit} (${(utilization * 100).toFixed(0)}%)`);
+    logger.error({ activeConnections, connectionLimit: config.connection_limit, utilizationPct: (utilization * 100).toFixed(0) }, "CRITICAL DB connection alert");
     // TODO: Send to monitoring service (Sentry, Datadog, etc.)
   } else if (utilization > 0.6) {
-    console.warn(`⚠️ High DB connection usage: ${activeConnections}/${config.connection_limit} (${(utilization * 100).toFixed(0)}%)`);
+    logger.warn({ activeConnections, connectionLimit: config.connection_limit, utilizationPct: (utilization * 100).toFixed(0) }, "High DB connection usage");
   }
 
   try {
@@ -81,7 +84,7 @@ prisma.$use(async (params, next) => {
 
 // Graceful shutdown
 const shutdown = async () => {
-  console.log('🔌 Disconnecting Prisma...');
+  logger.info("Disconnecting Prisma");
   await prisma.$disconnect();
 };
 
@@ -100,6 +103,6 @@ export function getConnectionStats() {
   };
 }
 
-console.log('✅ Prisma initialized with connection pooling:', getConnectionPoolConfig());
+logger.info({ poolConfig: getConnectionPoolConfig() }, "Prisma initialized with connection pooling");
 
 export default prisma;

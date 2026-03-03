@@ -47,11 +47,11 @@ const TIER_CONFIG = {
     ]
   },
   VSOL_HOLDER: {
-    label: '$vSOL Holder',
+    label: '$SIM Holder',
     icon: Crown,
     color: 'bg-gradient-to-r from-yellow-400 to-orange-500',
     textColor: 'text-yellow-700 dark:text-yellow-300',
-    description: 'Premium access for $vSOL token holders',
+    description: 'Premium access for $SIM token holders',
     defaultBenefits: [
       { name: '100 SOL Starting Balance', description: 'Maximum starting capital', available: true },
       { name: 'Premium Features', description: 'Advanced analytics and tools', available: true },
@@ -135,10 +135,10 @@ export function TierStatus({
             <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium">$vSOL Tokens</span>
+                <span className="text-sm font-medium">$SIM Tokens</span>
               </div>
               <p className="text-lg font-semibold text-yellow-600 dark:text-yellow-400">
-                {vsolTokenBalance.toLocaleString()} $vSOL
+                {vsolTokenBalance.toLocaleString()} $SIM
               </p>
             </div>
           )}

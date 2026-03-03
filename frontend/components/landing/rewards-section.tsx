@@ -8,22 +8,22 @@ const rewards = [
   {
     icon: TrendingUp,
     title: "Trading Volume Multiplier",
-    description: "Earn $vSOL tokens based on your trading activity. Higher volume = bigger multipliers and more rewards.",
+    description: "Earn $SIM tokens based on your trading activity. Higher volume = bigger multipliers and more rewards.",
   },
   {
     icon: Wallet,
-    title: "Hold $vSOL, Earn More",
-    description: "Hold $vSOL tokens to boost your reward multiplier. The more you hold, the more you earn from trading.",
+    title: "Hold $SIM, Earn More",
+    description: "Hold $SIM tokens to boost your reward multiplier. The more you hold, the more you earn from trading.",
   },
   {
     icon: Zap,
     title: "Daily Streak Bonuses",
-    description: "Log in daily to maintain your streak and unlock exponentially higher $vSOL rewards.",
+    description: "Log in daily to maintain your streak and unlock exponentially higher $SIM rewards.",
   },
   {
     icon: Trophy,
     title: "Leaderboard Rewards",
-    description: "Top traders earn exclusive $vSOL airdrops and bonus multipliers based on rankings.",
+    description: "Top traders earn exclusive $SIM airdrops and bonus multipliers based on rankings.",
   },
 ]
 
@@ -40,13 +40,13 @@ export function RewardsSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
             <Gift className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold text-primary">Earn $vSOL Tokens</span>
+            <span className="text-sm font-semibold text-primary">Earn $SIM Tokens</span>
           </div>
           <h2 className="font-heading text-4xl md:text-5xl font-bold text-balance">
-            Earn $vSOL While You Trade
+            Earn $SIM While You Trade
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Trade more, hold $vSOL, and earn multiplied rewards. The ultimate trading-to-earn platform.
+            Trade more, hold $SIM, and earn multiplied rewards. The ultimate trading-to-earn platform.
           </p>
         </motion.div>
 
@@ -87,20 +87,20 @@ export function RewardsSection() {
                 <Gift className="h-8 w-8 text-primary" />
               </div>
               <h3 className="font-heading text-2xl md:text-3xl font-bold">
-                How $vSOL Rewards Work
+                How $SIM Rewards Work
               </h3>
               <div className="space-y-3 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
                 <p>
-                  <span className="font-semibold text-foreground">Trade to earn $vSOL.</span> Every trade you make earns you $vSOL tokens. Higher trading volume = higher rewards.
+                  <span className="font-semibold text-foreground">Trade to earn $SIM.</span> Every trade you make earns you $SIM tokens. Higher trading volume = higher rewards.
                 </p>
                 <p>
-                  <span className="font-semibold text-foreground">Hold $vSOL to boost earnings.</span> Holding $vSOL tokens increases your reward multiplier, earning you even more $vSOL from your trades.
+                  <span className="font-semibold text-foreground">Hold $SIM to boost earnings.</span> Holding $SIM tokens increases your reward multiplier, earning you even more $SIM from your trades.
                 </p>
                 <p>
-                  <span className="font-semibold text-foreground">Climb the leaderboard.</span> Top traders receive exclusive $vSOL airdrops and premium multipliers.
+                  <span className="font-semibold text-foreground">Climb the leaderboard.</span> Top traders receive exclusive $SIM airdrops and premium multipliers.
                 </p>
                 <p className="pt-2 border-t border-primary/20">
-                  <span className="font-semibold text-primary text-lg">The more you trade and hold, the more $vSOL you claim!</span>
+                  <span className="font-semibold text-primary text-lg">The more you trade and hold, the more $SIM you claim!</span>
                 </p>
               </div>
             </div>

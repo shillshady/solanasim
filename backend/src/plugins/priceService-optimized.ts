@@ -13,6 +13,8 @@ import { EventEmitter } from "events";
 import WebSocket from "ws";
 import redis from "./redis.js";
 import { loggers } from "../utils/logger.js";
+import { LRUCache } from "../utils/lru-cache.js";
+import { CircuitBreaker } from "../utils/circuit-breaker.js";
 
 const logger = loggers.priceService;
 
@@ -28,129 +30,10 @@ interface PriceTick {
   change24h?: number;
 }
 
-// LRU Cache implementation
-class LRUCache<K, V> {
-  private cache = new Map<K, V>();
-  private maxSize: number;
-
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
-
-  get(key: K): V | undefined {
-    const value = this.cache.get(key);
-    if (value !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
-    }
-    this.cache.set(key, value);
-  }
-
-  has(key: K): boolean {
-    return this.cache.has(key);
-  }
-
-  get size(): number {
-    return this.cache.size;
-  }
-
-  forEach(callback: (value: V, key: K) => void): void {
-    this.cache.forEach((value, key) => callback(value, key));
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
 // Negative cache entry (for tokens that don't exist)
 interface NegativeCacheEntry {
   timestamp: number;
-  reason: string; // '404', '204', 'no-data', etc.
-}
-
-// Circuit breaker for external API calls (improved to handle expected failures)
-class CircuitBreaker {
-  private failureCount = 0;
-  private lastFailureTime = 0;
-  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
-  private readonly threshold = 5;
-  private readonly timeout = 60000;
-  private readonly name: string;
-
-  constructor(name: string = 'unknown') {
-    this.name = name;
-  }
-
-  async execute<T>(fn: () => Promise<T>): Promise<T | null> {
-    if (this.state === 'OPEN') {
-      if (Date.now() - this.lastFailureTime > this.timeout) {
-        this.state = 'HALF_OPEN';
-        logger.info({ breaker: this.name }, 'Circuit breaker entering HALF_OPEN state');
-      } else {
-        throw new Error('Circuit breaker is OPEN');
-      }
-    }
-
-    try {
-      const result = await fn();
-      if (this.state === 'HALF_OPEN') {
-        this.state = 'CLOSED';
-        this.failureCount = 0;
-        logger.info({ breaker: this.name }, 'Circuit breaker returned to CLOSED state');
-      }
-      return result;
-    } catch (error: any) {
-      // Don't count expected "not found" responses or timeouts as failures
-      const isExpectedFailure =
-        error.message?.includes('404') ||
-        error.message?.includes('204') ||
-        error.message?.includes('No Content') ||
-        error.message?.includes('Not Found') ||
-        error.message?.includes('Token not found') ||
-        error.message?.includes('aborted') ||        // AbortController timeout
-        error.message?.includes('fetch failed') ||    // Generic fetch failure (often timeout)
-        error.name === 'AbortError';                  // AbortController error type
-
-      if (isExpectedFailure) {
-        logger.debug({ breaker: this.name, error: error.message, type: error.name }, 'Expected failure - not counting toward circuit breaker');
-        throw error;
-      }
-
-      // Count only unexpected failures (network errors, 500s, etc.)
-      this.failureCount++;
-      this.lastFailureTime = Date.now();
-
-      if (this.failureCount >= this.threshold) {
-        this.state = 'OPEN';
-        logger.error({ breaker: this.name, error: error.message }, 'Circuit breaker opened after 5 unexpected failures');
-      }
-      throw error;
-    }
-  }
-
-  getState(): string {
-    return this.state;
-  }
-
-  reset(): void {
-    this.state = 'CLOSED';
-    this.failureCount = 0;
-    this.lastFailureTime = 0;
-    logger.info({ breaker: this.name }, 'Circuit breaker manually reset');
-  }
+  reason: string;
 }
 
 /**
@@ -163,8 +46,8 @@ class OptimizedPriceService extends EventEmitter {
   private ws: WebSocket | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
   private updateIntervals: NodeJS.Timeout[] = [];
-  private dexScreenerBreaker = new CircuitBreaker('DexScreener');
-  private jupiterBreaker = new CircuitBreaker('Jupiter');
+  private dexScreenerBreaker = new CircuitBreaker('DexScreener', logger);
+  private jupiterBreaker = new CircuitBreaker('Jupiter', logger);
 
   // Request coalescing to prevent duplicate concurrent requests
   private pendingRequests = new Map<string, Promise<PriceTick | null>>();
@@ -647,7 +530,7 @@ class OptimizedPriceService extends EventEmitter {
                 signal: controller.signal,
                 headers: {
                   'Accept': 'application/json',
-                  'User-Agent': 'VirtualSol/1.0'
+                  'User-Agent': 'Solana Sim/1.0'
                 }
               }
             );
@@ -785,7 +668,7 @@ class OptimizedPriceService extends EventEmitter {
               signal: controller.signal,
               headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'VirtualSol/1.0'
+                'User-Agent': 'Solana Sim/1.0'
               }
             }
           );
@@ -860,7 +743,7 @@ class OptimizedPriceService extends EventEmitter {
               signal: controller.signal,
               headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'VirtualSol/1.0'
+                'User-Agent': 'Solana Sim/1.0'
               }
             }
           );
@@ -921,7 +804,7 @@ class OptimizedPriceService extends EventEmitter {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'VirtualSol/1.0'
+          'User-Agent': 'Solana Sim/1.0'
         }
       });
       clearTimeout(timeoutId);

@@ -1,8 +1,7 @@
 // Migration service for data maintenance operations
 import prisma from "../plugins/prisma.js";
 import { Decimal } from "@prisma/client/runtime/library";
-
-const D = (x: Decimal | number | string) => new Decimal(x);
+import { D } from "../utils/pnl.js";
 
 interface MigrationResult {
   success: boolean;

@@ -2,6 +2,9 @@
 // @ts-ignore - redlock types are not fully compatible with ESM
 import Redlock from 'redlock';
 import redis from './redis.js';
+import { loggers } from '../utils/logger.js';
+
+const logger = loggers.redis;
 
 // Create Redlock instance with Redis client
 const redlock = new Redlock(
@@ -20,7 +23,7 @@ const redlock = new Redlock(
 
 // Error handling
 redlock.on('error', (error: Error) => {
-  console.error('Redlock error:', error);
+  logger.error({ err: error }, "Redlock error");
 });
 
 export default redlock;

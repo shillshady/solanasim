@@ -1,0 +1,81 @@
+databases:
+  - name: solanasim-db
+    plan: starter
+    databaseName: solanasim
+    user: solanasim
+
+  - name: solanasim-redis
+    plan: starter
+    type: redis
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+services:
+  - type: web
+    name: solanasim-api
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx tsc
+    startCommand: npx prisma migrate deploy && node --max-old-space-size=4096 dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: solanasim-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: solanasim-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        value: 8edrYprHwdl6TARy/mFu4P44cPDOk/8ZIQ6tmDXDcnc=
+      - key: HELIUS_API
+        value: 0e492ad2-d236-41dc-97e0-860d712bc03d
+      - key: HELIUS_WS
+        value: wss://mainnet.helius-rpc.com/?api-key=0e492ad2-d236-41dc-97e0-860d712bc03d
+      - key: SOLANA_RPC
+        value: https://mainnet.helius-rpc.com/?api-key=dd091d8d-f7eb-4d3c-83fc-87cc3232f4f6
+      - key: BIRDEYE_API_KEY
+        value: f3b21be81e7648659c88c1fbfc278190
+      - key: CMC_API_KEY
+        value: 4a113ea7-110c-42dd-be71-3fcc40f5d8e5
+      - key: DEXSCREENER_BASE
+        value: https://api.dexscreener.com
+      - key: JUPITER_BASE
+        value: https://quote-api.jup.ag
+      - key: FRONTEND_URL
+        value: https://www.starsol.fun/
+
+  - type: worker
+    name: solanasim-worker
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx tsc
+    startCommand: node --max-old-space-size=2048 dist/worker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: solanasim-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: solanasim-redis
+          type: redis
+          property: connectionString
+      - key: HELIUS_API
+        value: 0e492ad2-d236-41dc-97e0-860d712bc03d
+      - key: HELIUS_WS
+        value: wss://mainnet.helius-rpc.com/?api-key=0e492ad2-d236-41dc-97e0-860d712bc03d
+      - key: SOLANA_RPC
+        value: https://mainnet.helius-rpc.com/?api-key=dd091d8d-f7eb-4d3c-83fc-87cc3232f4f6
+      - key: DEXSCREENER_BASE
+        value: https://api.dexscreener.com
+      - key: JUPITER_BASE
+        value: https://quote-api.jup.ag

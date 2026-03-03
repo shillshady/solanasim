@@ -2,8 +2,7 @@
 // Run this to fix positions created before FIFO implementation
 import prisma from "../plugins/prisma.js";
 import { Decimal } from "@prisma/client/runtime/library";
-
-const D = (x: Decimal | number | string) => new Decimal(x);
+import { D } from "../utils/pnl.js";
 
 async function rebuildPositions() {
   console.log("🔧 Starting position data rebuild...\n");

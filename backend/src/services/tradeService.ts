@@ -8,6 +8,9 @@ import { addTradePoints } from "./rewardService.js";
 import { portfolioCoalescer } from "../utils/requestCoalescer.js";
 import * as notificationService from "./notificationService.js";
 import redlock from "../plugins/redlock.js";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.trade;
 
 // Helper for market cap VWAP
 function mcVwapUpdate(oldQty: Decimal, oldMcVwap: Decimal, buyQty: Decimal, mcAtFillUsd: Decimal | null) {
@@ -47,7 +50,7 @@ export async function fillTrade({
   if (q.lte(0)) throw new Error("Quantity must be greater than 0");
 
   // Debug logging for trade execution
-  console.log(`[Trade] ${side} order: userId=${userId}, mint=${mint.substring(0, 8)}..., qty=${qty}`);
+  logger.info({ side, userId, mint: mint.substring(0, 8), qty }, "Trade order received");
 
   // Acquire distributed lock to prevent race conditions on concurrent trades
   // Lock key format: trade:{userId}:{mint}
@@ -57,9 +60,9 @@ export async function fillTrade({
   let lock;
   try {
     lock = await redlock.acquire([lockKey], lockTTL);
-    console.log(`[Trade] Lock acquired for ${lockKey}`);
+    logger.debug({ lockKey }, "Lock acquired");
   } catch (error) {
-    console.error(`[Trade] Failed to acquire lock for ${lockKey}:`, error);
+    logger.error({ lockKey, error }, "Failed to acquire trade lock");
     throw new Error("Trade is already in progress for this token. Please wait and try again.");
   }
 
@@ -70,9 +73,9 @@ export async function fillTrade({
     // Always release the lock
     try {
       await lock.release();
-      console.log(`[Trade] Lock released for ${lockKey}`);
+      logger.debug({ lockKey }, "Lock released");
     } catch (error) {
-      console.error(`[Trade] Failed to release lock for ${lockKey}:`, error);
+      logger.error({ lockKey, error }, "Failed to release lock");
       // Non-critical error - lock will expire automatically
     }
   }
@@ -100,7 +103,7 @@ async function executeTradeLogic({
 
   // For SELL orders, if no price found, force a fresh fetch (bypass negative cache)
   // This handles cases where token was cached as "not found" but now has liquidity
-  if (!tick && side === 'sell') {
+  if (!tick && side === 'SELL') {
     logger.warn({ mint: mint.slice(0, 8), side }, "No cached price for SELL order, forcing fresh fetch");
     tick = await priceService.fetchTokenPrice(mint);
   }
@@ -157,14 +160,13 @@ async function executeTradeLogic({
 
     // If user is trying to sell slightly more than available due to rounding, clamp to available
     if (difference.lt(0) && difference.gte(EPSILON.neg())) {
-      console.log(`[Trade] ⚠️ Clamping sell quantity from ${q.toString()} to ${positionQty.toString()} (diff: ${difference.toString()})`);
+      logger.warn({ from: q.toString(), to: positionQty.toString(), diff: difference.toString() }, "Clamping sell quantity");
       q = positionQty; // Clamp to exact position quantity
     }
   }
 
-  // Calculate gross trade amounts (before fees)
+  // Calculate gross trade amount (before fees)
   const grossSol = q.mul(priceSol);
-  const grossUsd = q.mul(priceUsd);
 
   // Calculate fees (DEX + L1 + priority tip)
   const fees = simulateFees(grossSol);
@@ -194,8 +196,7 @@ async function executeTradeLogic({
   }
 
   // Debug logging for price and cost calculations
-  console.log(`[Trade] Price: USD=${priceUsd.toString()}, SOL=${priceSol.toString()}`);
-  console.log(`[Trade] Cost: SOL=${tradeCostSol.toString()}, USD=${tradeCostUsd.toString()}`);
+  logger.debug({ priceUsd: priceUsd.toString(), priceSol: priceSol.toString(), costSol: tradeCostSol.toString(), costUsd: tradeCostUsd.toString() }, "Trade price calculated");
 
 
   // Create trade record using a transaction to ensure consistency
@@ -308,9 +309,14 @@ async function executeTradeLogic({
 
       // Validation: newBasis should never be negative
       if (newBasis.lt(0)) {
-        console.error(`⚠️ FIFO calculation error: negative cost basis ${newBasis.toString()} for position ${pos.id}`);
-        console.error(`Position details: qty=${(pos.qty as Decimal).toString()}, costBasis=${(pos.costBasis as Decimal).toString()}`);
-        console.error(`Consumed: ${consumed.length} lots, total cost: ${totalConsumedCost.toString()}`);
+        logger.error({
+          positionId: pos.id,
+          newBasis: newBasis.toString(),
+          qty: (pos.qty as Decimal).toString(),
+          costBasis: (pos.costBasis as Decimal).toString(),
+          consumedLots: consumed.length,
+          totalConsumedCost: totalConsumedCost.toString()
+        }, "FIFO calculation error: negative cost basis");
         newBasis = D(0); // Clamp to zero to prevent negative values
       }
 
@@ -361,12 +367,12 @@ async function executeTradeLogic({
 
   // CRITICAL: Invalidate portfolio cache to prevent stale data
   portfolioCoalescer.invalidate(`portfolio:${userId}`);
-  console.log(`[Trade] Invalidated portfolio cache for user ${userId}`);
+  logger.debug({ userId }, "Portfolio cache invalidated");
 
   // Eagerly fetch price to ensure it's cached for the next portfolio request
   // This prevents the portfolio endpoint from having to refetch from DexScreener
   await priceService.getPrice(mint);
-  console.log(`[Trade] Prefetched and cached price for ${mint.substring(0, 8)}...`);
+  logger.debug({ mint: mint.substring(0, 8) }, "Price prefetched and cached");
 
   // Calculate portfolio totals
   const portfolioTotals = await calculatePortfolioTotals(userId);
@@ -399,9 +405,9 @@ async function executeTradeLogic({
   const { getPortfolio } = await import("./portfolioService.js");
   try {
     await getPortfolio(userId);
-    console.log(`[Trade] Portfolio cache warmed up successfully for user ${userId}`);
+    logger.debug({ userId }, "Portfolio cache warmed up");
   } catch (err) {
-    console.error(`[Trade] Failed to warm portfolio cache:`, err);
+    logger.error({ error: err }, "Failed to warm portfolio cache");
   }
 
   return {
@@ -441,10 +447,10 @@ async function calculatePortfolioTotals(userId: string) {
           // Skip positions with no price data
           continue;
         }
-      } catch (err) {
-        // Only log unexpected errors
-        if (!err.message?.includes('aborted') && !err.message?.includes('404')) {
-          console.error(`[Portfolio] Unexpected error for ${pos.mint.slice(0, 8)}:`, err);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (!message.includes('aborted') && !message.includes('404')) {
+          logger.error({ mint: pos.mint.slice(0, 8), error: err }, "Unexpected price fetch error");
         }
         continue;
       }

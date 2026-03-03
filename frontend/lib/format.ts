@@ -1,5 +1,5 @@
 /**
- * VirtualSol Numeric & Display Formatting (v1)
+ * Solana Sim Numeric & Display Formatting (v1)
  *
  * Standardized formatting utilities ensuring:
  * - Values are believable at a glance

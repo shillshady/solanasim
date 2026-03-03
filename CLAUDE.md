@@ -4,89 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-VirtualSol is a full-stack Solana paper trading platform with real-time price tracking, PnL calculations, leaderboards, and rewards. It uses a monorepo structure with a Next.js frontend and Fastify backend.
+VirtualSol is a full-stack Solana paper trading platform with real-time price tracking, PnL calculations, leaderboards, and rewards. Monorepo with Next.js frontend and Fastify backend.
 
 ## Project Structure
 
 ```
 VirtualSol/
-├── frontend/          # Next.js 14+ (App Router)
-├── backend/           # Fastify + Prisma
+├── frontend/          # Next.js 14+ (App Router), Tailwind v4
+├── backend/           # Fastify + Prisma (ESM, "type": "module")
 ├── packages/types/    # Shared TypeScript types
-└── ARCHITECTURE.md    # Detailed system architecture
 ```
+
+**Node >= 20 required.**
 
 ## Common Commands
 
-### Backend
+### Backend (`cd backend`)
 
 ```bash
-# Development
-cd backend
 npm run dev                # Start dev server with tsx
-npm run build             # Build TypeScript to dist/
-npm start                 # Run production build
+npm run dev:worker         # Start background worker process
+npm run build              # Generate Prisma client + tsc
+npm test                   # Run Jest tests
+npx jest path/to/file      # Run a single test file
 
 # Database
-npm run prisma:generate   # Generate Prisma client
-npm run prisma:migrate    # Apply migrations (dev)
-npm run db:migrate        # Apply migrations (alias)
-npm run db:reset          # Reset database
-npm run db:seed          # Seed database
-
-# Testing
-npm test                  # Run tests with jest
+npm run prisma:dev         # Create new migration (dev only)
+npm run prisma:migrate     # Deploy existing migrations
+npm run prisma:generate    # Regenerate Prisma client
+npm run db:reset           # Reset database
+npm run db:seed            # Seed database
+npx prisma studio          # Open Prisma Studio GUI
 ```
 
-### Frontend
+### Frontend (`cd frontend`)
 
 ```bash
-# Development
-cd frontend
-npm run dev              # Start Next.js dev server
-npm run build           # Build for production
-npm start               # Start production server
-
-# Code Quality
-npm run lint            # Run ESLint
-npm run lint:fix        # Fix ESLint issues
-npm run type-check      # TypeScript check (no emit)
-npm run format          # Format with Prettier
-npm run format:check    # Check Prettier formatting
-
-# Testing
-npm test                # Run Vitest
-npm run test:ui         # Vitest UI
-npm run test:coverage   # Coverage report
+npm run dev                # Start Next.js dev server
+npm run build              # Build for production
+npm test                   # Run Vitest
+npx vitest path/to/file    # Run a single test file
+npm run test:coverage      # Coverage report
+npm run lint               # ESLint
+npm run lint:fix           # Auto-fix ESLint
+npm run type-check         # TypeScript check (no emit)
 ```
 
 ### Monorepo Root
 
 ```bash
-# Development (run in separate terminals)
-npm run dev:backend         # Start backend dev server
-npm run dev:frontend        # Start frontend dev server
-
-# Building
-npm run build:backend       # Build backend
-npm run build:frontend      # Build frontend
+npm run dev:backend        # Alias for backend dev
+npm run dev:frontend       # Alias for frontend dev
 npm run build              # Build both
-
-# Testing
-npm run test:backend        # Run backend tests
-npm run test:frontend       # Run frontend tests
-npm test                   # Run all tests
-
-# Database (shortcuts)
-npm run db:migrate          # Apply migrations
-npm run db:generate         # Generate Prisma client
-npm run db:studio          # Open Prisma Studio
-
-# Deployment (GitHub auto-deploy recommended, see GITHUB_DEPLOYMENT_SETUP.md)
-npm run deploy:backend      # Manual: Deploy backend to Railway
-npm run deploy:frontend     # Manual: Deploy frontend to Vercel (production)
-
-# Cleaning
+npm test                   # Test both
+npm run db:migrate         # Deploy migrations
+npm run db:generate        # Generate Prisma client
 npm run clean              # Remove all node_modules and build artifacts
 ```
 
@@ -94,284 +66,156 @@ npm run clean              # Remove all node_modules and build artifacts
 
 ### Backend Service Pattern
 
-**Location**: `backend/src/`
+`backend/src/` follows routing → service → database:
 
-The backend follows a clear routing → service → database pattern:
-
-1. **Routes** (`routes/`) - Define API endpoints, register with Fastify
-2. **Services** (`services/`) - Business logic, async/await patterns
+1. **Routes** (`routes/`) - API endpoints registered with Fastify
+2. **Services** (`services/`) - Business logic with async/await
 3. **Plugins** (`plugins/`) - Shared functionality (auth, redis, websocket, price service)
-4. **Utils** (`utils/`) - Helper functions and utilities
+4. **Utils** (`utils/`) - Helpers
 
 Key services:
 - `tradeService.ts` - Trade execution and validation
-- `portfolioService.ts` - Position management and PnL calculations
-- `priceService.ts` / `priceService-v2.ts` - Real-time price streaming via Helius WebSocket
+- `portfolioService.ts` - Position management and PnL
+- `priceService-v2.ts` - Real-time price streaming via Helius WebSocket
 - `rewardService.ts` - VSOL token reward distribution
-- `walletTrackerService.ts` - KOL wallet tracking for copy trading
+- `walletTrackerService.ts` - KOL wallet tracking
+
+The backend also runs a **worker process** (`src/worker.ts`) for background tasks (start with `npm run dev:worker`).
 
 ### FIFO Position Tracking
 
-The platform uses strict FIFO (First-In-First-Out) accounting for trade lots:
+Strict FIFO accounting for trade lots via `Position`, `PositionLot`, `RealizedPnL` models.
 
-**Models**: `Position`, `PositionLot`, `RealizedPnL` (see `backend/prisma/schema.prisma`)
-
-**Buy trades** create new `PositionLot` entries with:
-- `qtyRemaining` - Amount available to sell
-- `unitCostUsd` - Purchase price per token
-- `createdAt` - Timestamp for FIFO ordering
-
-**Sell trades** consume lots in chronological order:
-1. Query lots ordered by `createdAt ASC`
-2. Consume from oldest lots first
-3. Calculate realized PnL: `qty * (sellPrice - lot.unitCost)`
-4. Update `qtyRemaining` or delete if fully consumed
-
-**See**: `backend/src/utils/pnl.ts`, `backend/src/services/pnl.ts` for implementation
+- **Buy trades** create `PositionLot` entries (`qtyRemaining`, `unitCostUsd`, `createdAt`)
+- **Sell trades** consume lots in `createdAt ASC` order, calculating realized PnL per lot
+- Implementation: `backend/src/utils/pnl.ts`, `backend/src/services/pnl.ts`
 
 ### Real-time Price Service
 
-**Location**: `backend/src/plugins/priceService-v2.ts`
+`backend/src/plugins/priceService-v2.ts` streams swap events from Solana DEXes via Helius WebSocket:
 
-The price service streams real-time swap events from Solana DEXes (Raydium, Pump.fun) via Helius WebSocket:
-
-1. **WebSocket connection** to Helius using `logsSubscribe` method
-2. **Program monitoring** - Subscribes to DEX program logs (Raydium V4, CLMM, Pump.fun)
-3. **Log parsing** - Extracts swap events from transaction logs
-4. **Price calculation** - Converts swap ratios to USD prices using SOL/USDC/USDT pairs
-5. **Caching** - Multi-layer cache (memory → Redis → fallback APIs)
-6. **Broadcasting** - Publishes to Redis pub/sub and local subscribers
-
-**Fallback price sources** (when WebSocket data unavailable):
-- DexScreener API
-- Jupiter Price API
-- CoinGecko (for SOL price)
+1. `logsSubscribe` to DEX programs (Raydium V4, CLMM, Pump.fun)
+2. Parse swap events from transaction logs
+3. Convert swap ratios to USD via SOL/USDC/USDT pairs
+4. Multi-layer cache: memory → Redis → fallback APIs (DexScreener, Jupiter, CoinGecko)
+5. Broadcast via Redis pub/sub
 
 ### Frontend Data Flow
 
-**Location**: `frontend/`
-
-- **State Management**: TanStack Query (React Query) for server state
-- **Real-time Updates**: WebSocket connection to backend price stream
-- **Optimistic Updates**: UI updates before server confirmation for better UX
-- **Context Providers**: Auth, PriceStream, Theme, Query (see `frontend/lib/`)
-
-**Query Configuration**:
-```typescript
-{
-  staleTime: 30000,        // 30 seconds
-  cacheTime: 300000,       // 5 minutes
-  refetchOnWindowFocus: false
-}
-```
-
-**Key Queries**: `usePortfolioQuery`, `useRewardsQuery`, `useLeaderboardQuery`
+- **State**: TanStack Query (`staleTime: 30s`, `cacheTime: 5m`, `refetchOnWindowFocus: false`)
+- **Real-time**: WebSocket connection to backend price stream
+- **Providers**: Auth, PriceStream, Theme, Query (in `frontend/lib/`)
+- **Key hooks**: `usePortfolioQuery`, `useRewardsQuery`, `useLeaderboardQuery`
 
 ### Database Schema Highlights
 
-**Core Tables**:
-- `User` - Authentication, wallet connection, tier management, virtual SOL balance
-- `Trade` - Complete trade history with PnL tracking
-- `Position` - Current holdings with FIFO lot tracking
-- `PositionLot` - Individual purchase lots for FIFO accounting
-- `TransactionHistory` - FIFO transaction ledger
-- `Token` - Token metadata with trending metrics (volume, price changes, momentum)
-- `RewardSnapshot` / `RewardClaim` - Epoch-based reward distribution
+Core tables: `User`, `Trade`, `Position`, `PositionLot`, `TransactionHistory`, `Token`, `RewardSnapshot`, `RewardClaim`
 
-**Important Indexes**:
-- `trades`: `userId + timestamp DESC` for recent trade queries
-- `positions`: `userId + mint` for position lookups
-- `positionLots`: `userId + mint + createdAt ASC` for FIFO lot consumption
+Important indexes:
+- `trades`: `userId + timestamp DESC`
+- `positions`: `userId + mint`
+- `positionLots`: `userId + mint + createdAt ASC` (FIFO ordering)
 
 ### WebSocket Architecture
 
-**Backend** (`backend/src/plugins/ws.ts`, `backend/src/ws/server.ts`):
-- Registered BEFORE rate limiting middleware
-- Uses `@fastify/websocket` plugin
-- Broadcasts price updates to connected clients
-- Subscription management for per-token price streams
-
-**Frontend** (`frontend/hooks/usePriceStream.tsx` or similar):
-- Establishes WebSocket connection on mount
-- Subscribes to tokens in active portfolio
-- Updates UI reactively on price changes
-
-## Development Guidelines
-
-### Type Safety
-
-- **End-to-end TypeScript** - Frontend and backend both use strict TS
-- **Shared types** - `@virtualsol/types` package or `frontend/lib/types/backend.ts`
-- **Runtime validation** - Zod schemas for all API inputs/outputs
-- **Never use `any`** - Strong typing required
-
-### Code Quality Rules
-
-- **Components ≤ 150 lines** - Split into smaller files if exceeded
-- **One concern per file** - Clear separation of responsibilities
-- **React.memo for performance** - Use for table rows, chart components
-- **JSDoc for utilities** - All helper functions need documentation
-
-### Validation & Security
-
-- All API routes validate input with Zod schemas
-- Prisma ORM prevents SQL injection via parameterized queries
-- JWT authentication with `@fastify/jwt`
-- Rate limiting via `@fastify/rate-limit`
-- CORS configured for specific origins (localhost:3000, virtualsol.fun, Vercel deployments)
-
-### External Service Integration
-
-**Required Environment Variables**:
-- `DATABASE_URL` - PostgreSQL connection
-- `REDIS_URL` - Redis cache and pub/sub
-- `HELIUS_API` - Helius API key for RPC and WebSocket
-- `HELIUS_RPC_URL` / `HELIUS_WS` - Helius endpoints
-- `SOLANA_RPC_URL` - Fallback Solana RPC
-- `VSOL_TOKEN_MINT` - VSOL token mint address for rewards
-- `REWARDS_WALLET_SECRET` - Secret key for reward distribution
-- `JWT_SECRET` - JWT signing secret
-
-**External APIs**:
-- Helius - Solana RPC + WebSocket for real-time swaps
-- DexScreener - Token metadata and price data
-- Jupiter - Price quotes and aggregation
-- CoinGecko - SOL/USD price reference
+Backend WS plugins (`plugins/ws.ts`, `ws/server.ts`) must be registered BEFORE rate limiting middleware. Frontend connects via `frontend/lib/ws.ts` and subscribes to per-token price streams.
 
 ## Critical Implementation Notes
 
 ### WebSocket Registration Order
 
-WebSocket routes MUST be registered BEFORE rate limiting middleware in `backend/src/index.ts`:
+In `backend/src/index.ts`, WS routes MUST register BEFORE rate limiting:
 
 ```typescript
-// ✅ Correct order
 app.register(websocket)
-app.register(wsTestPlugin)  // Register WS routes
 app.register(wsPlugin)
-app.register(rateLimiting)  // Rate limit comes AFTER
+app.register(rateLimiting)  // AFTER WebSocket routes
 ```
-
-This prevents rate limiting from interfering with WebSocket upgrade requests.
 
 ### FIFO Lot Consumption
 
-When implementing sell trades, ALWAYS consume lots in `createdAt ASC` order:
+Always consume lots oldest-first:
 
 ```typescript
 const lots = await prisma.positionLot.findMany({
   where: { userId, mint },
-  orderBy: { createdAt: 'asc' }  // CRITICAL: oldest first
+  orderBy: { createdAt: 'asc' }  // CRITICAL
 });
 ```
 
-Incorrect ordering breaks PnL accuracy and violates FIFO accounting.
-
 ### Price Service Initialization
 
-The price service MUST be started before the Fastify server listens:
+Price service MUST start before Fastify listens:
 
 ```typescript
-await priceService.start();  // Start WebSocket connections
+await priceService.start();
 app.listen({ port, host: "0.0.0.0" });
 ```
 
-This ensures prices are available when the first API requests arrive.
-
 ### Decimal Precision
 
-Use `Decimal` from Prisma for all financial calculations:
+Use `Decimal` from Prisma for all financial math:
 
 ```typescript
 import { Decimal } from '@prisma/client/runtime/library';
-
-// ✅ Correct
-const totalCost = new Decimal(price).mul(quantity);
-
-// ❌ Wrong - floating point errors
-const totalCost = price * quantity;
+const totalCost = new Decimal(price).mul(quantity);  // NOT price * quantity
 ```
 
-## Testing Strategy
+## Frontend Conventions
 
-**Backend**: Jest test suite (run with `npm test` in `backend/`)
-- Service unit tests
-- API integration tests
-- Database transaction tests
+### Next.js Patterns
 
-**Frontend**: Vitest with React Testing Library (run with `npm test` in `frontend/`)
-- Component unit tests
-- Hook tests
-- Integration tests with MSW for API mocking
+- Prefer **named exports** over default exports
+- Minimize `'use client'` — keep most components as RSC, create small client wrappers for interactivity
+- Use `nuqs` for URL search param state management
+- Wrap client components in `Suspense` with skeleton fallbacks
 
-## Git Workflow & Deployment
+### Brand & Visual Identity
 
-### Branch Strategy
+- **Aesthetic**: Black-and-white minimalist trading UI
+- **Accent**: Gradient teal → purple (`--gradient-primary`)
+- **Fonts**: IBM Plex Sans Bold (headings), JetBrains Mono (data/numbers), muted gray for secondary text
+- **Effects**: Glass-morphism and subtle glow on cards/modals; Framer Motion fade/slide (150–300ms)
+- Use shadcn/ui primitives for consistent accessibility
 
-The project uses a three-branch workflow for safe development:
+### Numeric Formatting
 
-- **`dev`** - Active development branch (daily work happens here)
-- **`staging`** - Pre-production testing (merge from dev before production)
-- **`main`** - Production only (deploy only after staging verification)
+All monetary/numeric displays must use helpers from `lib/format.ts`:
+- `formatUSD`, `formatPriceUSD`, `formatQty`, `safePercent`
+- Show both USD and SOL equivalents via `SolEquiv` component
+- Guard divide-by-zero → display "—"
+- Never round before aggregating; only at render
 
-**Development Flow**:
-```bash
-# Daily work on dev
-git checkout dev
-git add .
-git commit -m "feat: your feature"
-git push origin dev  # No deployment
+Precision rules:
+| Value | Format |
+|---|---|
+| USD >= $10K | Compact (`$12.3K`) |
+| USD < $10K | 2 decimals |
+| Price < $1 | 3-6 decimals |
+| Qty < 1 | 4-6 decimals |
+| Percent | Always show sign (+/-), 2 decimals |
 
-# Test on staging
-git checkout staging
-git merge dev
-git push origin staging  # Auto-deploys to staging (if GitHub linked)
+### Responsive Layout
 
-# Deploy to production
-git checkout main
-git merge staging
-git push origin main  # Auto-deploys to production (if GitHub linked)
-```
+- Grid/flex with `gap-4` desktop, `gap-2` mobile
+- Breakpoints: 1-col mobile → 2-col tablet → 3-4-col desktop
+- Vertical rhythm: spacing multiples of 4px
 
-### Deployment
+## Environment Variables
 
-**Recommended:** Link GitHub to Railway and Vercel for automatic deployments.
+**Backend** (`.env`): `DATABASE_URL`, `REDIS_URL`, `HELIUS_API`, `HELIUS_RPC_URL`, `HELIUS_WS`, `SOLANA_RPC_URL`, `JWT_SECRET`, `VSOL_TOKEN_MINT`, `REWARDS_WALLET_SECRET`
 
-**Critical Configuration for Monorepo**:
-- Railway Root Directory: `backend`
-- Vercel Root Directory: `frontend`
+**Frontend** (`.env.local`): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`
 
-**Manual Deployment** (if not using GitHub auto-deploy):
-```bash
-# Backend to Railway
-cd backend && railway up
+## Git Workflow
 
-# Frontend to Vercel
-cd frontend && npx vercel --prod
-```
+- **`dev`** — Active development
+- **`staging`** — Pre-production testing
+- **`main`** — Production only
 
-See **GITHUB_DEPLOYMENT_SETUP.md** for complete auto-deployment configuration.
+Deploy: Railway (backend, root dir: `backend`) + Vercel (frontend, root dir: `frontend`).
 
-### Environment Setup
+## Testing
 
-All environment variables are documented in **ENVIRONMENT_SETUP.md**.
-
-**Backend** (`.env`):
-- Database, Redis, Solana RPC, JWT secrets, API keys
-
-**Frontend** (`.env.local`):
-- `NEXT_PUBLIC_API_URL` - Backend API endpoint
-- `NEXT_PUBLIC_WS_URL` - Backend WebSocket endpoint
-
-**Important**: Never commit `.env` files. Only `.env.example` templates are tracked.
-
-## Additional Resources
-
-- **WORKFLOW.md** - Complete development workflow and deployment guide
-- **QUICK_START.md** - Quick reference for common commands
-- **ENVIRONMENT_SETUP.md** - Environment variable configuration guide
-- **GITHUB_DEPLOYMENT_SETUP.md** - GitHub auto-deployment setup with Railway/Vercel
-- **ARCHITECTURE.md** - Comprehensive system architecture documentation
-- **README.md** - General project overview and setup instructions
-- **Prisma Schema** (`backend/prisma/schema.prisma`) - Complete database schema with comments
-- **Cursor Rules** (`.cursor/rules/`) - AI assistant guidelines for architecture, services, code quality
+- **Backend**: Jest — `npm test` in `backend/`
+- **Frontend**: Vitest + React Testing Library + MSW — `npm test` in `frontend/`

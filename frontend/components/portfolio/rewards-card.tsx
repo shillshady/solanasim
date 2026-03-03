@@ -44,7 +44,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
     onSuccess: (data) => {
       toast({
         title: "Rewards Claimed!",
-        description: `Successfully claimed ${data.amount} $vSOL tokens`,
+        description: `Successfully claimed ${data.amount} $SIM tokens`,
       })
       // Refresh claims data
       queryClient.invalidateQueries({ queryKey: ['reward-claims', userId] })
@@ -129,10 +129,10 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Gift className="h-5 w-5" />
-          vSOL Token Rewards
+          SIM Token Rewards
         </CardTitle>
         <CardDescription>
-          Earn $vSOL tokens based on your trading activity. Rewards are distributed weekly.
+          Earn $SIM tokens based on your trading activity. Rewards are distributed weekly.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -144,7 +144,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
               Unclaimed Rewards
             </div>
             <div className="text-2xl font-bold">
-              {formatNumber(totalUnclaimed)} $vSOL
+              {formatNumber(totalUnclaimed)} $SIM
             </div>
           </div>
           <div className="space-y-2">
@@ -165,7 +165,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Total Claimed</div>
-                <div className="font-medium">{formatNumber(rewardStats.totalAmount)} $vSOL</div>
+                <div className="font-medium">{formatNumber(rewardStats.totalAmount)} $SIM</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Total Claims</div>
@@ -194,7 +194,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary">Week {claim.epoch}</Badge>
                     <div>
-                      <div className="font-medium">{formatNumber(parseFloat(claim.amount))} $vSOL</div>
+                      <div className="font-medium">{formatNumber(parseFloat(claim.amount))} $SIM</div>
                       <div className="text-sm text-muted-foreground">
                         Available to claim
                       </div>
@@ -226,7 +226,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">Week {claim.epoch}</Badge>
                     <div>
-                      <div className="font-medium">{formatNumber(parseFloat(claim.amount))} $vSOL</div>
+                      <div className="font-medium">{formatNumber(parseFloat(claim.amount))} $SIM</div>
                       <div className="text-sm text-muted-foreground">
                         Claimed {claim.claimedAt ? new Date(claim.claimedAt).toLocaleDateString() : 'Unknown'}
                       </div>
@@ -252,7 +252,7 @@ export function RewardsCard({ userId, walletAddress }: RewardsCardProps) {
           <Alert>
             <TrendingUp className="h-4 w-4" />
             <AlertDescription>
-              Start trading to earn $vSOL token rewards! Your trading activity generates points that are converted to rewards each week.
+              Start trading to earn $SIM token rewards! Your trading activity generates points that are converted to rewards each week.
             </AlertDescription>
           </Alert>
         )}

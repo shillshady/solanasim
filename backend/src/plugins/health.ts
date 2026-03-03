@@ -4,6 +4,9 @@ import prisma from './prisma.js';
 import redis from './redis.js';
 import priceService from './priceService.js';
 import { performance } from 'perf_hooks';
+import { loggers } from '../utils/logger.js';
+
+const logger = loggers.server;
 
 interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -293,5 +296,5 @@ export default async function healthPlugin(app: FastifyInstance) {
     }
   });
 
-  console.log('✅ Health monitoring initialized at /health');
+  logger.info("Health monitoring initialized at /health");
 }

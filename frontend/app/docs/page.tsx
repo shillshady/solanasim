@@ -29,7 +29,7 @@ export default function DocumentationPage() {
               <h1 className="font-heading text-4xl md:text-5xl font-bold">Documentation</h1>
             </div>
             <p className="text-xl text-muted-foreground">
-              Everything you need to know about using VirtualSol
+              Everything you need to know about using Solana Sim
             </p>
           </div>
         </motion.div>
@@ -51,7 +51,7 @@ export default function DocumentationPage() {
                   <span className="font-medium text-foreground">Sign Up:</span> Create your account with email or connect your Solana wallet
                 </li>
                 <li className="leading-relaxed">
-                  <span className="font-medium text-foreground">Get Virtual Balance:</span> Receive virtual balance instantly to start trading (10 SOL for standard users, 100 SOL for vSOL holders)
+                  <span className="font-medium text-foreground">Get Virtual Balance:</span> Receive virtual balance instantly to start trading (10 SOL for standard users, 100 SOL for SIM holders)
                 </li>
                 <li className="leading-relaxed">
                   <span className="font-medium text-foreground">Explore Tokens:</span> Browse trending tokens from Birdeye and Pump.fun on the Trending page
@@ -95,7 +95,7 @@ export default function DocumentationPage() {
                 <div className="space-y-2">
                   <h3 className="font-semibold text-lg">Virtual Balance</h3>
                   <p className="text-muted-foreground text-sm">
-                    Start with virtual balance (10 SOL for standard users, 100 SOL for vSOL holders). Trade without losing real money while you learn. Top up anytime to continue trading.
+                    Start with virtual balance (10 SOL for standard users, 100 SOL for SIM holders). Trade without losing real money while you learn. Top up anytime to continue trading.
                   </p>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function DocumentationPage() {
                 <h3 className="font-semibold text-lg">Important Information</h3>
                 <div className="space-y-2 text-muted-foreground text-sm">
                   <p>
-                    <strong className="text-foreground">No Real Money:</strong> VirtualSol is a paper trading simulator.
+                    <strong className="text-foreground">No Real Money:</strong> Solana Sim is a paper trading simulator.
                     All trades use virtual SOL and no real cryptocurrency is involved.
                   </p>
                   <p>
@@ -195,7 +195,7 @@ export default function DocumentationPage() {
                     actual trading results may differ due to slippage, fees, and other market conditions.
                   </p>
                   <p>
-                    <strong className="text-foreground">Not Financial Advice:</strong> VirtualSol does not provide investment
+                    <strong className="text-foreground">Not Financial Advice:</strong> Solana Sim does not provide investment
                     advice. Always do your own research before trading real cryptocurrency.
                   </p>
                 </div>
@@ -212,7 +212,7 @@ export default function DocumentationPage() {
           className="text-center space-y-4 py-8"
         >
           <h2 className="font-heading text-2xl font-bold">Ready to Start Trading?</h2>
-          <p className="text-muted-foreground">Get virtual balance (10 SOL for standard users, 100 SOL for vSOL holders) and start practicing today.</p>
+          <p className="text-muted-foreground">Get virtual balance (10 SOL for standard users, 100 SOL for SIM holders) and start practicing today.</p>
           <Link href="/trade">
             <Button size="lg" className="gap-2">
               <TrendingUp className="h-5 w-5" />

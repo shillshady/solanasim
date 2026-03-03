@@ -249,19 +249,14 @@ export function NavBar() {
           {/* Logo and Brand */}
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
-              {mounted && (
-                <Image
-                  src={resolvedTheme === 'dark' ? '/helius-dark.svg' : '/helius-light.svg'}
-                  alt="Helius"
-                  width={150}
-                  height={46}
-                  priority
-                  className="h-9 w-auto"
-                />
-              )}
-              {!mounted && (
-                <div className="h-9 w-[150px]" />
-              )}
+              <Image
+                src="/solana-sim-banner-v2.png"
+                alt="Solana Sim"
+                width={150}
+                height={50}
+                priority
+                className="h-9 w-auto brightness-0 dark:brightness-100"
+              />
             </Link>
 
             {/* Desktop Navigation */}
@@ -277,7 +272,7 @@ export function NavBar() {
                       size="sm"
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 transition-all duration-200",
-                        isActive && "bg-primary/10 text-primary font-semibold"
+                        isActive && "bg-brand-muted text-brand font-semibold"
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -297,7 +292,7 @@ export function NavBar() {
                 placeholder="Search tokens..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10 w-full border border-border hover:border-foreground/20 focus:border-foreground transition-colors"
+                className="pl-10 pr-10 w-full border border-border hover:border-brand/40 focus:border-brand transition-colors"
               />
               {isSearching && (
                 <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -384,7 +379,7 @@ export function NavBar() {
                   className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors cursor-pointer group"
                   aria-label="Purchase simulated SOL"
                 >
-                  <Wallet className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                  <Wallet className="h-4 w-4 text-brand group-hover:scale-110 transition-transform" />
                   <div className="text-sm">
                     <div className="font-semibold text-foreground">
                       {balanceData ? `${parseFloat(balanceData.balance).toFixed(2)} SOL` : 'Loading...'}
@@ -437,7 +432,10 @@ export function NavBar() {
                 </div>
               </>
             ) : (
-              <Button onClick={() => setAuthModalOpen(true)} className="font-semibold">
+              <Button
+                onClick={() => setAuthModalOpen(true)}
+                className="font-semibold bg-brand text-brand-foreground hover:bg-brand/90"
+              >
                 Sign In
               </Button>
             )}
@@ -534,7 +532,7 @@ export function NavBar() {
                           <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                             <div className={cn(
                               "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
-                              isActive ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                              isActive ? "bg-brand-muted text-brand" : "hover:bg-muted"
                             )}>
                               <Icon className="h-5 w-5" />
                               <div>

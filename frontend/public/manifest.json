@@ -1,6 +1,6 @@
 {
-  "name": "VirtualSol - Solana Trading Simulator",
-  "short_name": "VirtualSol",
+  "name": "Solana Sim - Solana Trading Simulator",
+  "short_name": "Solana Sim",
   "description": "Advanced Solana paper trading with real-time data, offline capabilities, and professional portfolio tracking.",
   "start_url": "/",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "background_color": "#0a0a0a",
   "theme_color": "#3b82f6",
   "scope": "/",
-  "id": "com.virtualsol.app",
+  "id": "com.solanasim.app",
   "categories": ["finance", "productivity", "education", "business"],
   "lang": "en-US",
   "edge_side_panel": {
@@ -96,14 +96,14 @@
       "sizes": "1280x720",
       "type": "image/svg+xml",
       "form_factor": "wide",
-      "label": "VirtualSol Dashboard"
+      "label": "Solana Sim Dashboard"
     },
     {
       "src": "/og-image.svg", 
       "sizes": "750x1334",
       "type": "image/svg+xml",
       "form_factor": "narrow",
-      "label": "VirtualSol Mobile View"
+      "label": "Solana Sim Mobile View"
     }
   ],
   "related_applications": [],

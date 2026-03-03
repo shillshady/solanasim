@@ -166,7 +166,7 @@ export function RewardsHistory() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(stats.totalClaimed)}</div>
-            <p className="text-xs text-muted-foreground">$vSOL tokens</p>
+            <p className="text-xs text-muted-foreground">$SIM tokens</p>
           </CardContent>
         </Card>
 
@@ -180,7 +180,7 @@ export function RewardsHistory() {
             <div className="text-2xl font-bold text-yellow-500">
               {formatNumber(stats.totalPending)}
             </div>
-            <p className="text-xs text-muted-foreground">$vSOL tokens</p>
+            <p className="text-xs text-muted-foreground">$SIM tokens</p>
           </CardContent>
         </Card>
 
@@ -204,7 +204,7 @@ export function RewardsHistory() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(stats.avgClaimSize)}</div>
-            <p className="text-xs text-muted-foreground">$vSOL per claim</p>
+            <p className="text-xs text-muted-foreground">$SIM per claim</p>
           </CardContent>
         </Card>
       </div>
@@ -309,7 +309,7 @@ export function RewardsHistory() {
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold">
-                          {formatNumber(parseFloat(claim.amount))} $vSOL
+                          {formatNumber(parseFloat(claim.amount))} $SIM
                         </div>
                       </TableCell>
                       <TableCell>

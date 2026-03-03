@@ -1,75 +1,75 @@
 // Portfolio routes with enhanced functionality
 import { FastifyInstance } from "fastify";
-import { 
-  getPortfolio, 
-  getPortfolioWithRealTimePrices, 
+import {
+  getPortfolio,
+  getPortfolioWithRealTimePrices,
   getPortfolioTradingStats,
-  getPortfolioPerformance 
+  getPortfolioPerformance
 } from "../services/portfolioService.js";
+import { authenticateToken, type AuthenticatedRequest } from "../plugins/auth.js";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.portfolio;
 
 export default async function (app: FastifyInstance) {
   // Main portfolio endpoint with metadata enrichment
-  app.get("/", async (req, reply) => {
-    const userId = (req.query as any).userId;
-    if (!userId) return reply.code(400).send({ error: "userId required" });
-    
+  app.get("/", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+
     try {
       const data = await getPortfolio(userId);
       return data;
     } catch (error) {
-      console.error("Portfolio fetch error:", error);
-      return reply.code(500).send({ 
-        error: "Failed to fetch portfolio data" 
+      logger.error("Portfolio fetch error:", error);
+      return reply.code(500).send({
+        error: "Failed to fetch portfolio data"
       });
     }
   });
 
   // Real-time portfolio endpoint with live price updates
-  app.get("/realtime", async (req, reply) => {
-    const userId = (req.query as any).userId;
-    if (!userId) return reply.code(400).send({ error: "userId required" });
-    
+  app.get("/realtime", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+
     try {
       const data = await getPortfolioWithRealTimePrices(userId);
       return data;
     } catch (error) {
-      console.error("Real-time portfolio fetch error:", error);
-      return reply.code(500).send({ 
-        error: "Failed to fetch real-time portfolio data" 
+      logger.error("Real-time portfolio fetch error:", error);
+      return reply.code(500).send({
+        error: "Failed to fetch real-time portfolio data"
       });
     }
   });
 
   // Trading statistics endpoint
-  app.get("/stats", async (req, reply) => {
-    const userId = (req.query as any).userId;
-    if (!userId) return reply.code(400).send({ error: "userId required" });
-    
+  app.get("/stats", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+
     try {
       const stats = await getPortfolioTradingStats(userId);
       return stats;
     } catch (error) {
-      console.error("Portfolio stats fetch error:", error);
-      return reply.code(500).send({ 
-        error: "Failed to fetch portfolio statistics" 
+      logger.error("Portfolio stats fetch error:", error);
+      return reply.code(500).send({
+        error: "Failed to fetch portfolio statistics"
       });
     }
   });
 
   // Portfolio performance over time
-  app.get("/performance", async (req, reply) => {
-    const userId = (req.query as any).userId;
-    const days = parseInt((req.query as any).days) || 30;
-    
-    if (!userId) return reply.code(400).send({ error: "userId required" });
-    
+  app.get("/performance", { preHandler: [authenticateToken] }, async (req: AuthenticatedRequest, reply) => {
+    const userId = req.user!.id;
+    const { days: daysStr } = req.query as { days?: string };
+    const days = parseInt(daysStr || "30") || 30;
+
     try {
       const performance = await getPortfolioPerformance(userId, days);
       return { performance };
     } catch (error) {
-      console.error("Portfolio performance fetch error:", error);
-      return reply.code(500).send({ 
-        error: "Failed to fetch portfolio performance" 
+      logger.error("Portfolio performance fetch error:", error);
+      return reply.code(500).send({
+        error: "Failed to fetch portfolio performance"
       });
     }
   });

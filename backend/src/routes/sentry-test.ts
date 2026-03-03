@@ -17,7 +17,7 @@ export default async function sentryTestRoutes(app: FastifyInstance) {
 
     // Send a test message to Sentry
     app.get('/api/sentry-test/message', async (request, reply) => {
-      const message = `Test message from VirtualSol at ${new Date().toISOString()}`;
+      const message = `Test message from Solana Sim at ${new Date().toISOString()}`;
       Sentry.captureMessage(message, 'info');
 
       reply.send({
@@ -31,7 +31,7 @@ export default async function sentryTestRoutes(app: FastifyInstance) {
     app.get('/api/sentry-test/error', async (request, reply) => {
       try {
         // Simulate an error
-        throw new Error(`Test error from VirtualSol at ${new Date().toISOString()}`);
+        throw new Error(`Test error from Solana Sim at ${new Date().toISOString()}`);
       } catch (error) {
         // This will be caught by the global error handler
         throw error;
@@ -47,7 +47,7 @@ export default async function sentryTestRoutes(app: FastifyInstance) {
 
       // Simulate an unhandled rejection
       setTimeout(() => {
-        Promise.reject(new Error('Test unhandled rejection from VirtualSol'));
+        Promise.reject(new Error('Test unhandled rejection from Solana Sim'));
       }, 1000);
     });
   }

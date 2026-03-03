@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import prisma from '../plugins/prisma.js';
 import redis from '../plugins/redis.js';
+import { loggers } from '../utils/logger.js';
+
+const logger = loggers.auth;
 
 // Get JWT config from environment variables
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -45,8 +48,8 @@ class AuthService {
 
     const accessToken = jwt.sign(payload, VERIFIED_JWT_SECRET, {
       expiresIn: JWT_EXPIRY,
-      issuer: 'virtualsol.fun',
-      audience: 'virtualsol.fun'
+      issuer: 'solanasim.fun',
+      audience: 'solanasim.fun'
     } as jwt.SignOptions);
 
     const refreshToken = jwt.sign(
@@ -54,8 +57,8 @@ class AuthService {
       VERIFIED_JWT_SECRET, 
       {
         expiresIn: REFRESH_TOKEN_EXPIRY,
-        issuer: 'virtualsol.fun',
-        audience: 'virtualsol.fun'
+        issuer: 'solanasim.fun',
+        audience: 'solanasim.fun'
       } as jwt.SignOptions
     );
 
@@ -66,8 +69,8 @@ class AuthService {
   static verifyToken(token: string): JWTPayload {
     try {
       return jwt.verify(token, VERIFIED_JWT_SECRET, {
-        issuer: 'virtualsol.fun',
-        audience: 'virtualsol.fun'
+        issuer: 'solanasim.fun',
+        audience: 'solanasim.fun'
       }) as JWTPayload;
     } catch (error) {
       throw new Error('Invalid or expired token');
@@ -111,11 +114,8 @@ class AuthService {
 
   // Invalidate all user sessions
   static async invalidateAllUserSessions(userId: string): Promise<void> {
-    const pattern = `session:session_${userId}_*`;
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(keys);
-    }
+    const { scanAndDelete } = await import("../utils/redis-helpers.js");
+    await scanAndDelete(`session:session_${userId}_*`);
   }
 }
 
@@ -144,18 +144,36 @@ export const authenticateToken = async (request: AuthenticatedRequest, reply: Fa
       });
     }
 
-    // Validate user still exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, userTier: true, email: true }
-    });
+    // Validate user still exists (cached in Redis to avoid DB hit on every request)
+    const userCacheKey = `user:exists:${payload.userId}`;
+    let userExists = false;
 
-    if (!user) {
-      await AuthService.invalidateSession(payload.sessionId);
-      return reply.code(401).send({ 
-        error: 'USER_NOT_FOUND', 
-        message: 'User account not found' 
+    try {
+      const cached = await redis.get(userCacheKey);
+      if (cached) {
+        userExists = true;
+      }
+    } catch {}
+
+    if (!userExists) {
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true }
       });
+
+      if (!user) {
+        await AuthService.invalidateSession(payload.sessionId);
+        return reply.code(401).send({
+          error: 'USER_NOT_FOUND',
+          message: 'User account not found'
+        });
+      }
+
+      try {
+        await redis.setex(userCacheKey, 60, '1');
+      } catch {}
+
+      userExists = true;
     }
 
     // Attach user info to request
@@ -188,12 +206,26 @@ export const optionalAuthentication = async (request: AuthenticatedRequest, repl
     const isValidSession = await AuthService.validateSession(payload.sessionId);
     
     if (isValidSession) {
-      const user = await prisma.user.findUnique({
-        where: { id: payload.userId },
-        select: { id: true, userTier: true }
-      });
+      const userCacheKey = `user:exists:${payload.userId}`;
+      let userExists = false;
 
-      if (user) {
+      try {
+        const cached = await redis.get(userCacheKey);
+        if (cached) userExists = true;
+      } catch {}
+
+      if (!userExists) {
+        const user = await prisma.user.findUnique({
+          where: { id: payload.userId },
+          select: { id: true }
+        });
+        if (user) {
+          try { await redis.setex(userCacheKey, 60, '1'); } catch {}
+          userExists = true;
+        }
+      }
+
+      if (userExists) {
         request.user = {
           id: payload.userId,
           userTier: payload.userTier,
@@ -203,7 +235,7 @@ export const optionalAuthentication = async (request: AuthenticatedRequest, repl
     }
   } catch (error) {
     // Silently fail for optional authentication
-    console.warn('Optional authentication failed:', error);
+    logger.warn({ err: error }, "Optional authentication failed");
   }
 };
 

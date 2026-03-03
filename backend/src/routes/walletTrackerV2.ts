@@ -2,6 +2,7 @@
 import { FastifyInstance } from "fastify";
 import prisma from "../plugins/prisma.js";
 import { WalletActivityService } from "../services/walletActivityService.js";
+import logger from "../utils/logger.js";
 
 export default async function walletTrackerV2Routes(app: FastifyInstance) {
   const activityService = new WalletActivityService(app.log);
@@ -353,7 +354,7 @@ async function getCurrentTokenPrice(mint: string): Promise<number> {
       }
     }
   } catch (error) {
-    console.error(`Failed to get price for ${mint}:`, error);
+    logger.error({ mint, error }, "Failed to get price for token");
   }
 
   // Default to a small amount if price fetch fails

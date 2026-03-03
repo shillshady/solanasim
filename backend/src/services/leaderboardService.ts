@@ -3,6 +3,9 @@
 import prisma from "../plugins/prisma.js";
 import redis from "../plugins/redis.js";
 import { Decimal } from "@prisma/client/runtime/library";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.leaderboard;
 
 export interface LeaderboardEntry {
   userId: string;
@@ -26,14 +29,14 @@ export async function getLeaderboard(limit: number = 50): Promise<LeaderboardEnt
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`[LEADERBOARD CACHE HIT] Returning cached leaderboard for limit: ${limit}`);
+      logger.info({ limit }, "Cache hit, returning cached leaderboard");
       return JSON.parse(cached);
     }
   } catch (error) {
-    console.warn('Redis cache read failed for leaderboard:', error);
+    logger.warn({ err: error }, "Redis cache read failed for leaderboard");
   }
 
-  console.log(`[LEADERBOARD CACHE MISS] Calculating leaderboard for limit: ${limit}`);
+  logger.info({ limit }, "Cache miss, calculating leaderboard");
 
   // Calculate leaderboard using optimized database aggregation
   const leaderboard = await calculateLeaderboard(limit);
@@ -41,9 +44,9 @@ export async function getLeaderboard(limit: number = 50): Promise<LeaderboardEnt
   // Cache result in Redis for 60 seconds
   try {
     await redis.setex(cacheKey, 60, JSON.stringify(leaderboard));
-    console.log(`[LEADERBOARD CACHED] Cached leaderboard for ${limit} users`);
+    logger.info({ limit }, "Cached leaderboard results");
   } catch (error) {
-    console.warn('Failed to cache leaderboard:', error);
+    logger.warn({ err: error }, "Failed to cache leaderboard");
   }
 
   return leaderboard;
@@ -146,7 +149,7 @@ async function calculateLeaderboard(limit: number): Promise<LeaderboardEntry[]> 
     }));
 
   const duration = Date.now() - startTime;
-  console.log(`[LEADERBOARD CALCULATED] Took ${duration}ms for ${users.length} users`);
+  logger.info({ durationMs: duration, userCount: users.length }, "Leaderboard calculation complete");
 
   return sortedLeaderboard;
 }
@@ -158,9 +161,9 @@ export async function invalidateLeaderboardCache(): Promise<void> {
   try {
     // Delete common cache keys
     await redis.del('leaderboard:50', 'leaderboard:100', 'leaderboard:200');
-    console.log('[LEADERBOARD CACHE INVALIDATED]');
+    logger.info("Leaderboard cache invalidated");
   } catch (error) {
-    console.warn('Failed to invalidate leaderboard cache:', error);
+    logger.warn({ err: error }, "Failed to invalidate leaderboard cache");
   }
 }
 
@@ -180,7 +183,7 @@ export async function rollupUser(userId: string): Promise<void> {
     // - Trigger real-time leaderboard updates
     // - Process large datasets in batches
 
-    console.log(`📊 Rolling up leaderboard data for user: ${userId}`);
+    logger.info({ userId }, "Rolling up leaderboard data for user");
 
     // Verify user exists
     const user = await prisma.user.findUnique({
@@ -196,7 +199,7 @@ export async function rollupUser(userId: string): Promise<void> {
     // For example: force refresh cached data, recalculate complex metrics, etc.
 
   } catch (error) {
-    console.error(`Failed to rollup user ${userId}:`, error);
+    logger.error({ userId, err: error }, "Failed to rollup user");
     throw error;
   }
 }

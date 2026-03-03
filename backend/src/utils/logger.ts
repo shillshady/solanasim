@@ -77,6 +77,13 @@ export const loggers = {
   auth: logger.child({ component: 'auth' }),
   redis: logger.child({ component: 'redis' }),
   database: logger.child({ component: 'database' }),
+  email: logger.child({ component: 'email' }),
+  liquidation: logger.child({ component: 'liquidation' }),
+  nonce: logger.child({ component: 'nonce' }),
+  leaderboard: logger.child({ component: 'leaderboard' }),
+  notification: logger.child({ component: 'notification' }),
+  worker: logger.child({ component: 'worker' }),
+  rateLimiting: logger.child({ component: 'rate-limiting' }),
 };
 
 // Helper functions

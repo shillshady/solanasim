@@ -8,7 +8,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center group">
               <span className="font-heading text-2xl font-bold tracking-tight group-hover:scale-105 transition-transform duration-200">
-                VirtualSol
+                Solana Sim
               </span>
             </Link>
             <p className="text-sm text-background/60">
@@ -58,7 +58,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <a
-                  href="https://x.com/virtualsol_fun"
+                  href="https://x.com/SolanaSimx"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-background/60 hover:text-background transition-colors"
@@ -71,9 +71,9 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-center">
-          <p className="text-sm text-background/60">© 2025 VirtualSol. All rights reserved.</p>
+          <p className="text-sm text-background/60">© 2025 Solana Sim. All rights reserved.</p>
           <p className="mt-2 text-xs text-background/40">
-            <strong>Disclaimer:</strong> VirtualSol is a simulator. No real financial risk is involved.
+            <strong>Disclaimer:</strong> Solana Sim is a simulator. No real financial risk is involved.
           </p>
         </div>
       </div>

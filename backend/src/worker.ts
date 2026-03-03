@@ -1,5 +1,5 @@
 /**
- * Background Worker Service for VirtualSol
+ * Background Worker Service for Solana Sim
  *
  * Jobs:
  * 1. Trending Token Calculator - Calculates momentum/trending scores every 5 minutes
@@ -9,13 +9,12 @@
  * from the main API service, improving overall performance.
  */
 
-import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import prisma from "./plugins/prisma.js";
 import priceService from "./plugins/priceService-optimized.js";
 import { loggers } from "./utils/logger.js";
 
 const logger = loggers.priceService;
-const prisma = new PrismaClient();
 
 // Configuration
 const TRENDING_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -172,15 +171,15 @@ async function prewarmPriceCache() {
  * Main Worker Service
  */
 async function startWorker() {
-  logger.info("🚀 VirtualSol Worker Service Starting...");
+  logger.info("🚀 Solana Sim Worker Service Starting...");
 
   // Initialize price service
   await priceService.start();
   logger.info("✅ Price service connected");
 
-  // Test database connection
+  // Verify database connection
   try {
-    await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
     logger.info("✅ Database connected");
   } catch (dbError) {
     const errorMsg = dbError instanceof Error ? dbError.message : String(dbError);
@@ -217,30 +216,25 @@ async function startWorker() {
   logger.info("✅ Worker service running");
 }
 
-// Graceful shutdown
+// Graceful shutdown (prisma singleton handles its own disconnect)
 process.on('SIGTERM', async () => {
   logger.info("🛑 Received SIGTERM, shutting down gracefully...");
-  await prisma.$disconnect();
   await priceService.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info("🛑 Received SIGINT, shutting down gracefully...");
-  await prisma.$disconnect();
   await priceService.stop();
   process.exit(0);
 });
 
 // Start the worker
 startWorker().catch((error) => {
-  console.error("❌ Worker service failed to start:");
-  console.error("Error message:", error.message);
-  console.error("Error stack:", error.stack);
   logger.error({
     message: error.message,
     stack: error.stack,
     name: error.name
-  }, "❌ Worker service failed to start");
+  }, "Worker service failed to start");
   process.exit(1);
 });

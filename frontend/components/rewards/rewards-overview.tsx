@@ -53,7 +53,7 @@ export function RewardsOverview() {
     onSuccess: (data) => {
       toast({
         title: "Rewards Claimed!",
-        description: `Successfully claimed ${formatNumber(parseFloat(data.amount))} $vSOL tokens`,
+        description: `Successfully claimed ${formatNumber(parseFloat(data.amount))} $SIM tokens`,
       })
       queryClient.invalidateQueries({ queryKey: ['reward-claims', user?.id] })
     },
@@ -198,7 +198,7 @@ export function RewardsOverview() {
             <Gift className="h-12 w-12 text-muted-foreground mx-auto" />
             <div>
               <h3 className="text-lg font-semibold">Sign In to View Rewards</h3>
-              <p className="text-sm text-muted-foreground">Connect your account to start earning $vSOL tokens</p>
+              <p className="text-sm text-muted-foreground">Connect your account to start earning $SIM tokens</p>
             </div>
           </div>
         </CardContent>
@@ -237,7 +237,7 @@ export function RewardsOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-2">{formatNumber(totalUnclaimed)}</div>
-            <p className="text-sm text-muted-foreground mb-4">$vSOL to claim</p>
+            <p className="text-sm text-muted-foreground mb-4">$SIM to claim</p>
             {unclaimedRewards.length > 0 && (
               <Button
                 size="sm"
@@ -261,7 +261,7 @@ export function RewardsOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-2">{formatNumber(totalClaimed + totalUnclaimed)}</div>
-            <p className="text-sm text-muted-foreground">$vSOL earned total</p>
+            <p className="text-sm text-muted-foreground">$SIM earned total</p>
           </CardContent>
         </Card>
 
@@ -315,7 +315,7 @@ export function RewardsOverview() {
                 Unclaimed Rewards
               </CardTitle>
               <CardDescription>
-                Claim your rewards to receive $vSOL tokens
+                Claim your rewards to receive $SIM tokens
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -325,7 +325,7 @@ export function RewardsOverview() {
                     <div className="flex items-center gap-3">
                       <Coins className="h-5 w-5 text-primary" />
                       <div>
-                        <div className="font-semibold text-lg">{formatNumber(parseFloat(claim.amount))} $vSOL</div>
+                        <div className="font-semibold text-lg">{formatNumber(parseFloat(claim.amount))} $SIM</div>
                         <div className="text-xs text-muted-foreground">
                           Day {claim.epoch}
                         </div>
@@ -358,7 +358,7 @@ export function RewardsOverview() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <div className="text-3xl font-bold mb-1">{formatNumber(rewardStats.totalAmount)}</div>
-                  <p className="text-sm text-muted-foreground">$vSOL Distributed</p>
+                  <p className="text-sm text-muted-foreground">$SIM Distributed</p>
                 </div>
                 <div>
                   <div className="text-3xl font-bold mb-1">{rewardStats.totalClaims}</div>

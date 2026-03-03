@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense } from "react"
-import { AuthGuard } from "@/components/auth/auth-guard"
+import { AuthCTA } from "@/components/auth/auth-cta"
 import { PnLCard } from "@/components/portfolio/pnl-card"
 import { UnifiedPositions } from "@/components/portfolio/unified-positions"
 import { RewardsCard } from "@/components/portfolio/rewards-card"
@@ -13,7 +13,7 @@ import { PortfolioChart } from "@/components/portfolio/portfolio-chart-dynamic"
 import { SimplePageHeader, PortfolioPageActions } from "@/components/shared/simple-page-header"
 import { EnhancedCard, CardGrid, CardSection } from "@/components/ui/enhanced-card-system"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, History, BarChart3, Wallet, Target, Loader2 } from "lucide-react"
+import { TrendingUp, History, BarChart3, Wallet, Target, Loader2, PieChart } from "lucide-react"
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -149,7 +149,7 @@ function PortfolioPageContent() {
                   <div className="p-6 space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold">Trending Tokens</h3>
-                      <p className="text-sm text-muted-foreground">Popular tokens on VirtualSol</p>
+                      <p className="text-sm text-muted-foreground">Popular tokens on Solana Sim</p>
                     </div>
                     <EnhancedTrendingList />
                   </div>

@@ -125,7 +125,7 @@ export function RewardsLeaderboard() {
                 Top Reward Earners
               </CardTitle>
               <CardDescription className="mt-1">
-                The traders earning the most $vSOL tokens
+                The traders earning the most $SIM tokens
               </CardDescription>
             </div>
             <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as any)} className="w-full sm:w-auto">
@@ -180,11 +180,11 @@ export function RewardsLeaderboard() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Weekly Rewards</span>
-                  <span className="font-semibold">{formatNumber(leader.weeklyRewards)} $vSOL</span>
+                  <span className="font-semibold">{formatNumber(leader.weeklyRewards)} $SIM</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Earned</span>
-                  <span className="font-semibold">{formatNumber(leader.totalRewards)} $vSOL</span>
+                  <span className="font-semibold">{formatNumber(leader.totalRewards)} $SIM</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Win Rate</span>
@@ -246,7 +246,7 @@ export function RewardsLeaderboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold">{formatNumber(leader.weeklyRewards)} $vSOL</div>
+                  <div className="font-semibold">{formatNumber(leader.weeklyRewards)} $SIM</div>
                   <div className="text-sm text-muted-foreground">This week</div>
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function RewardsLeaderboard() {
                 <h3 className="text-lg font-semibold mb-2">Rewards Leaderboard Coming Soon</h3>
                 <p className="text-sm text-muted-foreground text-center max-w-md">
                   Start trading now to prepare for the rewards leaderboard launch.
-                  Your trading performance will be tracked and rewarded with $vSOL tokens.
+                  Your trading performance will be tracked and rewarded with $SIM tokens.
                 </p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export function RewardsLeaderboard() {
               <div className="text-3xl font-bold mb-1">
                 {formatNumber(leaders?.reduce((sum, l) => sum + l.weeklyRewards, 0) || 0)}
               </div>
-              <p className="text-sm text-muted-foreground">Total Weekly $vSOL</p>
+              <p className="text-sm text-muted-foreground">Total Weekly $SIM</p>
             </div>
             <div>
               <div className="text-3xl font-bold mb-1">

@@ -13,7 +13,7 @@ const features = [
   {
     icon: Wallet,
     title: "Virtual SOL Balance",
-    description: "Start with virtual balance (10 SOL for standard users, 100 SOL for vSOL holders). Trade without losing real money while you learn.",
+    description: "Start with virtual balance (10 SOL for standard users, 100 SOL for SIM holders). Trade without losing real money while you learn.",
   },
   {
     icon: Eye,
@@ -28,7 +28,7 @@ const features = [
   {
     icon: Gift,
     title: "Rewards System",
-    description: "Earn rewards for trading activity, daily streaks, and achievements. Future $vSOL token airdrops.",
+    description: "Earn rewards for trading activity, daily streaks, and achievements. Future $SIM token airdrops.",
   },
   {
     icon: BarChart3,

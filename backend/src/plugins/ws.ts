@@ -1,6 +1,9 @@
 // WebSocket plugin for real-time updates with contract-compliant formatting
 import { FastifyInstance } from "fastify";
 import priceService from "./priceService.js";
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.websocket;
 
 // Convert SOL price to lamports (for contract compliance)
 function solToLamports(solPrice: number): string {
@@ -48,7 +51,7 @@ export default async function wsPlugin(app: FastifyInstance) {
     
     // Only log broadcasts if there are many clients (reduced log noise)
     if (sent > 10) {
-      console.log(`📊 Broadcasted price update for ${tick.mint} to ${sent} clients`);
+      logger.info({ mint: tick.mint, clientCount: sent }, "Broadcasted price update");
     }
   });
 
@@ -72,7 +75,7 @@ export default async function wsPlugin(app: FastifyInstance) {
 
   // Enhanced WebSocket route for price updates with new contract format
   app.get("/ws/prices", { websocket: true }, (socket, req) => {
-      console.log("🔌 Client connected to price WebSocket from", req.ip);
+      logger.info({ ip: req.ip }, "Client connected to price WebSocket");
       
       // @ts-ignore
       socket.isAlive = true;
@@ -85,7 +88,7 @@ export default async function wsPlugin(app: FastifyInstance) {
       try {
         socket.send(JSON.stringify({ type: "hello", message: "connected", ts: Date.now() }));
       } catch (e) {
-        console.error("❌ Failed to send hello message:", e);
+        logger.error({ err: e }, "Failed to send hello message");
       }
 
       // Handle pong responses
@@ -139,7 +142,7 @@ export default async function wsPlugin(app: FastifyInstance) {
                   // No cached price (log removed to reduce noise)
                 }
               }).catch(err => {
-                console.error(`❌ Failed to get price for ${data.mint}:`, err);
+                logger.error({ mint: data.mint, err }, "Failed to get price");
                 // Send a placeholder response so the client knows we received the subscription
                 socket.send(JSON.stringify({
                   type: "price",
@@ -163,7 +166,7 @@ export default async function wsPlugin(app: FastifyInstance) {
                     timestamp: tick.timestamp
                   }));
                 } catch (err) {
-                  console.error(`❌ Failed to send price update for ${data.mint}:`, err);
+                  logger.error({ mint: data.mint, err }, "Failed to send price update");
                 }
               }
             });
@@ -186,18 +189,18 @@ export default async function wsPlugin(app: FastifyInstance) {
             try {
               socket.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
             } catch (err) {
-              console.error("❌ Failed to send pong:", err);
+              logger.error({ err }, "Failed to send pong");
             }
           } else if (data.type === "pong") {
             // Client responded to our ping - connection is healthy (log removed to reduce noise)
           }
         } catch (error) {
-          console.error("❌ Error parsing message:", error);
+          logger.error({ err: error }, "Error parsing message");
         }
       });
       
       socket.on("close", () => {
-        console.log("🔌 Client disconnected");
+        logger.info("Client disconnected");
         
         // Remove from clients set
         clients.delete(socket);
@@ -211,7 +214,7 @@ export default async function wsPlugin(app: FastifyInstance) {
       });
       
       socket.on("error", (error) => {
-        console.error("❌ WebSocket error:", error);
+        logger.error({ err: error }, "WebSocket error");
         
         // Remove from clients set
         clients.delete(socket);

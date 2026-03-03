@@ -2,6 +2,7 @@
 import { FastifyInstance } from "fastify";
 import { getTokenMeta, getTokenInfo } from "../services/tokenService.js";
 import { robustFetch } from "../utils/fetch.js";
+import logger from "../utils/logger.js";
 
 const DEX = process.env.DEXSCREENER_BASE || "https://api.dexscreener.com";
 const BIRDEYE = process.env.BIRDEYE_BASE || "https://public-api.birdeye.so";
@@ -143,7 +144,7 @@ async function searchTokens(query: string, limit: number = 20) {
       results.push(...enrichedTokens);
     }
   } catch (error: any) {
-    console.warn(`DexScreener search failed (${error.code || error.message}):`, error.message);
+    logger.warn({ code: error.code, message: error.message }, "DexScreener search failed");
   }
   
   // Search Birdeye (if API key available)
@@ -187,7 +188,7 @@ async function searchTokens(query: string, limit: number = 20) {
         results.push(...enrichedTokens);
       }
     } catch (error: any) {
-      console.warn(`Birdeye search failed (${error.code || error.message}):`, error.message);
+      logger.warn({ code: error.code, message: error.message }, "Birdeye search failed");
     }
   }
   

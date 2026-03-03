@@ -1,4 +1,4 @@
-// Enhanced Service Worker for VirtualSol PWA
+// Enhanced Service Worker for Solana Sim PWA
 // Includes proper background sync handling and offline capabilities
 
 import { defaultCache } from '@serwist/next/worker'

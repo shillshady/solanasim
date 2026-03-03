@@ -1,19 +1,20 @@
+import { loggers } from "../utils/logger.js";
+const logger = loggers.redis;
+
 // Redis client for caching
 import Redis from "ioredis";
 
 // Create Redis connection with better error handling
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-console.log(`🔌 Attempting to connect to Redis:`);
-console.log(`   Raw URL: ${redisUrl}`);
-console.log(`   Sanitized: ${redisUrl.replace(/:[^:]*@/, ':***@')}`);
+logger.info("Connecting to Redis");
+logger.info({ url: redisUrl.replace(/:[^:]*@/, ':***@') }, "Redis URL");
 
 // Validate URL format
 try {
   const url = new URL(redisUrl);
-  console.log(`   Parsed hostname: ${url.hostname}`);
-  console.log(`   Parsed port: ${url.port}`);
+  logger.info({ hostname: url.hostname, port: url.port }, "Redis target");
 } catch (error: any) {
-  console.error(`❌ Invalid Redis URL format: ${error.message}`);
+  logger.error({ error: error.message }, "Invalid Redis URL format");
 }
 
 const redis = new Redis(redisUrl, {
@@ -25,18 +26,18 @@ const redis = new Redis(redisUrl, {
   // Retry strategy with exponential backoff
   retryStrategy(times) {
     if (times > 5) {
-      console.error('❌ Redis connection failed after 5 retries');
+      logger.error("Redis connection failed after 5 retries");
       return null; // Stop retrying
     }
     const delay = Math.min(times * 500, 3000); // Max 3s delay
-    console.log(`⏳ Redis retry ${times}/5 in ${delay}ms`);
+    logger.info({ attempt: times, delayMs: delay }, "Redis retry");
     return delay;
   },
   // Reconnect on error for better resilience
   reconnectOnError(err) {
     const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
     if (targetErrors.some(target => err.message.includes(target))) {
-      console.log(`♻️ Redis reconnecting due to: ${err.message}`);
+      logger.warn({ reason: err.message }, "Redis reconnecting");
       return true;
     }
     return false;
@@ -45,25 +46,25 @@ const redis = new Redis(redisUrl, {
 
 redis.on("error", (err: Error) => {
   // Log Redis errors for debugging, but don't crash the app
-  console.error(`Redis Client Error: ${err.name}: ${err.message}`);
+  logger.error({ error: err.message }, "Redis client error");
 });
 
 redis.on("connect", () => {
-  console.log("✅ Connected to Redis");
+  logger.info("Connected to Redis");
 });
 
 redis.on("close", () => {
-  console.log("❌ Disconnected from Redis");
+  logger.warn("Disconnected from Redis");
 });
 
 // Test Redis connection and handle gracefully
 redis.connect()
   .then(() => {
-    console.log("✅ Redis connected successfully");
+    logger.info("Redis connected successfully");
   })
   .catch((err) => {
-    console.error("❌ Redis connection failed:", err.message);
-    console.log("⚠️ App will continue without Redis caching");
+    logger.error({ error: err.message }, "Redis connection failed");
+    logger.warn("App will continue without Redis caching");
   });
 
 export default redis;

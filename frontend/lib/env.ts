@@ -19,7 +19,7 @@ const Env = z.object({
     .refine(url => !url.includes('vercel.app') || url.includes('ws.'), {
       message: "Avoid routing WebSocket through Vercel edge proxy - use direct ws.domain.com"
     })
-    .describe("Direct WebSocket URL (e.g., wss://ws.virtualsol.com/prices)"),
+    .describe("Direct WebSocket URL (e.g., wss://ws.solanasim.com/prices)"),
   
   // Required API URL for backend communication
   NEXT_PUBLIC_API_URL: z.string().url().describe("Backend API URL"),

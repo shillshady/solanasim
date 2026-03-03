@@ -71,7 +71,7 @@ export function HeroSection() {
             >
               <div className="space-y-1">
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00ff85]">10-100 SOL</div>
-                <p className="text-xs sm:text-sm text-background/60">Starting balance (10 SOL standard, 100 SOL for vSOL holders)</p>
+                <p className="text-xs sm:text-sm text-background/60">Starting balance (10 SOL standard, 100 SOL for SIM holders)</p>
               </div>
               <div className="space-y-1">
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold">Rewards</div>
@@ -99,7 +99,7 @@ export function HeroSection() {
                 playsInline
                 className="w-full h-auto object-contain"
               >
-                <source src="/demo-video.mp4?v=2" type="video/mp4" />
+                <source src="/final comp_1.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>

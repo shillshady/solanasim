@@ -1,6 +1,8 @@
 // Email service for sending verification and password reset emails
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import { loggers } from "../utils/logger.js";
+const logger = loggers.email;
 
 // Lazy initialization to allow environment variables to be loaded first
 let resend: Resend | null = null;
@@ -11,20 +13,20 @@ function getResendClient(): Resend | null {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.warn('⚠️  RESEND_API_KEY not configured - email functionality will be disabled');
+      logger.warn("RESEND_API_KEY not configured - email functionality disabled");
       isInitialized = true;
       return null;
     }
 
     resend = new Resend(RESEND_API_KEY);
     isInitialized = true;
-    console.log('✅ Resend email service initialized');
+    logger.info("Resend email service initialized");
   }
 
   return resend;
 }
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'VirtualSol <noreply@virtualsol.fun>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Solana Sim <noreply@solanasim.fun>';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 export class EmailService {
@@ -48,42 +50,37 @@ export class EmailService {
   static async sendVerificationEmail(email: string, token: string, username: string): Promise<boolean> {
     const client = getResendClient();
     if (!client) {
-      console.error('❌ Email service not configured - RESEND_API_KEY is missing');
-      console.error('⚠️  Please set RESEND_API_KEY environment variable to enable email functionality');
+      logger.error("Email service not configured - RESEND_API_KEY is missing");
       return false;
     }
 
     // Validate email format
     if (!email || !this.isValidEmailFormat(email)) {
-      console.error(`❌ Invalid email format: ${email}`);
+      logger.error({ email }, "Invalid email format");
       return false;
     }
 
     const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
 
     try {
-      console.log(`📤 Sending verification email to: ${email}`);
-      console.log(`🔗 Verification URL: ${verificationUrl.substring(0, 50)}...`);
+      logger.info({ email }, "Sending verification email");
 
       const { data, error } = await client.emails.send({
         from: FROM_EMAIL,
         to: email,
-        subject: 'Verify your VirtualSol account',
+        subject: 'Verify your Solana Sim account',
         html: this.getVerificationEmailTemplate(username, verificationUrl),
       });
 
       if (error) {
-        console.error('❌ Resend API error:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
+        logger.error({ error }, "Resend API error");
         return false;
       }
 
-      console.log(`✅ Verification email sent successfully to ${email}`);
-      console.log(`📧 Resend email ID: ${data?.id}`);
+      logger.info({ email, emailId: data?.id }, "Verification email sent");
       return true;
     } catch (error: any) {
-      console.error('❌ Exception sending verification email:', error.message);
-      console.error('Error stack:', error.stack);
+      logger.error({ error }, "Exception sending verification email");
       return false;
     }
   }
@@ -93,7 +90,7 @@ export class EmailService {
    */
   private static isValidEmailFormat(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) && email.length <= 254 && !email.includes('@wallet.virtualsol.fun');
+    return emailRegex.test(email) && email.length <= 254 && !email.includes('@wallet.solanasim.fun');
   }
 
   /**
@@ -102,7 +99,7 @@ export class EmailService {
   static async sendPasswordResetEmail(email: string, token: string, username: string): Promise<boolean> {
     const client = getResendClient();
     if (!client) {
-      console.warn('Email service not configured - skipping password reset email');
+      logger.warn("Email service not configured, skipping password reset email");
       return false;
     }
 
@@ -112,19 +109,19 @@ export class EmailService {
       const { data, error} = await client.emails.send({
         from: FROM_EMAIL,
         to: email,
-        subject: 'Reset your VirtualSol password',
+        subject: 'Reset your Solana Sim password',
         html: this.getPasswordResetEmailTemplate(username, resetUrl),
       });
 
       if (error) {
-        console.error('Failed to send password reset email:', error);
+        logger.error({ error }, "Failed to send password reset email");
         return false;
       }
 
-      console.log(`✅ Password reset email sent to ${email} (ID: ${data?.id})`);
+      logger.info({ email, emailId: data?.id }, "Password reset email sent");
       return true;
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      logger.error({ error }, "Error sending password reset email");
       return false;
     }
   }
@@ -135,7 +132,7 @@ export class EmailService {
   static async sendWelcomeEmail(email: string, username: string): Promise<boolean> {
     const client = getResendClient();
     if (!client) {
-      console.warn('Email service not configured - skipping welcome email');
+      logger.warn("Email service not configured, skipping welcome email");
       return false;
     }
 
@@ -143,19 +140,19 @@ export class EmailService {
       const { data, error } = await client.emails.send({
         from: FROM_EMAIL,
         to: email,
-        subject: 'Welcome to VirtualSol - Your paper trading journey begins!',
+        subject: 'Welcome to Solana Sim - Your paper trading journey begins!',
         html: this.getWelcomeEmailTemplate(username),
       });
 
       if (error) {
-        console.error('Failed to send welcome email:', error);
+        logger.error({ error }, "Failed to send welcome email");
         return false;
       }
 
-      console.log(`✅ Welcome email sent to ${email} (ID: ${data?.id})`);
+      logger.info({ email, emailId: data?.id }, "Welcome email sent");
       return true;
     } catch (error) {
-      console.error('Error sending welcome email:', error);
+      logger.error({ error }, "Error sending welcome email");
       return false;
     }
   }
@@ -170,7 +167,7 @@ export class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify your VirtualSol account</title>
+        <title>Verify your Solana Sim account</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -180,7 +177,7 @@ export class EmailService {
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">VirtualSol</h1>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">Solana Sim</h1>
                     <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Solana Paper Trading</p>
                   </td>
                 </tr>
@@ -190,7 +187,7 @@ export class EmailService {
                   <td style="padding: 40px 30px;">
                     <h2 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">Welcome, ${username}!</h2>
                     <p style="color: #4a4a4a; margin: 0 0 20px 0; font-size: 16px; line-height: 1.6;">
-                      Thank you for signing up with VirtualSol. To get started with paper trading on Solana, please verify your email address by clicking the button below:
+                      Thank you for signing up with Solana Sim. To get started with paper trading on Solana, please verify your email address by clicking the button below:
                     </p>
 
                     <!-- CTA Button -->
@@ -219,10 +216,10 @@ export class EmailService {
                 <tr>
                   <td style="background-color: #f8f8f8; padding: 30px; text-align: center; border-top: 1px solid #e5e5e5;">
                     <p style="color: #8a8a8a; margin: 0 0 10px 0; font-size: 14px;">
-                      If you didn't create a VirtualSol account, you can safely ignore this email.
+                      If you didn't create a Solana Sim account, you can safely ignore this email.
                     </p>
                     <p style="color: #8a8a8a; margin: 0; font-size: 12px;">
-                      © ${new Date().getFullYear()} VirtualSol. All rights reserved.
+                      © ${new Date().getFullYear()} Solana Sim. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -245,7 +242,7 @@ export class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset your VirtualSol password</title>
+        <title>Reset your Solana Sim password</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -255,7 +252,7 @@ export class EmailService {
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">VirtualSol</h1>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">Solana Sim</h1>
                     <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Solana Paper Trading</p>
                   </td>
                 </tr>
@@ -306,7 +303,7 @@ export class EmailService {
                       This link was requested from IP address. If you didn't request this, please contact support.
                     </p>
                     <p style="color: #8a8a8a; margin: 0; font-size: 12px;">
-                      © ${new Date().getFullYear()} VirtualSol. All rights reserved.
+                      © ${new Date().getFullYear()} Solana Sim. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -329,7 +326,7 @@ export class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to VirtualSol!</title>
+        <title>Welcome to Solana Sim!</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -339,7 +336,7 @@ export class EmailService {
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">🎉 Welcome to VirtualSol!</h1>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">🎉 Welcome to Solana Sim!</h1>
                   </td>
                 </tr>
 
@@ -386,7 +383,7 @@ export class EmailService {
                       Need help? Check out our <a href="${FRONTEND_URL}/help" style="color: #667eea; text-decoration: none;">Help Center</a>
                     </p>
                     <p style="color: #8a8a8a; margin: 0; font-size: 12px;">
-                      © ${new Date().getFullYear()} VirtualSol. All rights reserved.
+                      © ${new Date().getFullYear()} Solana Sim. All rights reserved.
                     </p>
                   </td>
                 </tr>

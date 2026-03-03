@@ -1,6 +1,9 @@
 // Rate limiting middleware with Redis backend
 import { FastifyRequest, FastifyReply } from 'fastify';
 import redis from './redis.js';
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.rateLimiting;
 
 interface RateLimitConfig {
   max: number; // Maximum requests
@@ -61,7 +64,7 @@ export class RateLimiter {
         remaining
       };
     } catch (error) {
-      console.error('Rate limit check failed:', error);
+      logger.error({ err: error }, "Rate limit check failed");
       // On Redis failure, allow the request through
       return {
         totalHits: 1,
@@ -191,22 +194,24 @@ export class RateLimitMonitor {
         sensitive: 'sensitive_limit:*'
       };
 
-      const stats: any = {};
+      const { scanKeys } = await import("../utils/redis-helpers.js");
 
+      const result = { auth: 0, wallet: 0, trading: 0, general: 0, sensitive: 0 };
       for (const [type, pattern] of Object.entries(patterns)) {
-        const keys = await redis.keys(pattern);
-        stats[type] = keys.length;
+        const keys = await scanKeys(pattern);
+        result[type as keyof typeof result] = keys.length;
       }
 
-      return stats;
+      return result;
     } catch (error) {
-      console.error('Failed to get rate limit statistics:', error);
+      logger.error({ err: error }, "Failed to get rate limit statistics");
       return { auth: 0, wallet: 0, trading: 0, general: 0, sensitive: 0 };
     }
   }
 
   static async clearExpiredLimits(): Promise<number> {
     try {
+      const { scanKeys } = await import("../utils/redis-helpers.js");
       const patterns = [
         'auth_limit:*',
         'wallet_limit:*',
@@ -218,8 +223,8 @@ export class RateLimitMonitor {
       let cleared = 0;
 
       for (const pattern of patterns) {
-        const keys = await redis.keys(pattern);
-        
+        const keys = await scanKeys(pattern);
+
         for (const key of keys) {
           const ttl = await redis.ttl(key);
           if (ttl <= 0) {
@@ -229,13 +234,9 @@ export class RateLimitMonitor {
         }
       }
 
-      if (cleared > 0) {
-        console.log(`🧹 Cleared ${cleared} expired rate limit entries`);
-      }
-
       return cleared;
     } catch (error) {
-      console.error('Failed to clear expired rate limits:', error);
+      logger.error({ err: error }, "Failed to clear expired rate limits");
       return 0;
     }
   }
@@ -251,13 +252,13 @@ export class RateLimitCleanupService {
       return; // Already running
     }
 
-    console.log('🧹 Starting rate limit cleanup service...');
+    logger.info("Starting rate limit cleanup service");
     
     this.interval = setInterval(async () => {
       try {
         await RateLimitMonitor.clearExpiredLimits();
       } catch (error) {
-        console.error('Rate limit cleanup service error:', error);
+        logger.error({ err: error }, "Rate limit cleanup service error");
       }
     }, this.CLEANUP_INTERVAL);
   }
@@ -266,7 +267,7 @@ export class RateLimitCleanupService {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
-      console.log('🛑 Stopped rate limit cleanup service');
+      logger.info("Stopped rate limit cleanup service");
     }
   }
 }

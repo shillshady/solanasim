@@ -112,7 +112,7 @@ export function BottomNavBar() {
                   href={item.href}
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 px-4 py-2 transition-all duration-300 relative z-10",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                    isActive ? "text-brand" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <motion.div
@@ -128,7 +128,7 @@ export function BottomNavBar() {
                       {isActive && (
                         <motion.div
                           layoutId="bottomNavIndicator"
-                          className="absolute -inset-2 rounded-full bg-primary/10 border border-primary/20"
+                          className="absolute -inset-2 rounded-full bg-brand-muted border border-brand/20"
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.8 }}
@@ -160,7 +160,7 @@ export function BottomNavBar() {
         <Link href="/wallet-tracker">
           <Button
             size="icon"
-            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 bg-gradient-to-br from-primary to-primary/80"
+            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 bg-brand text-brand-foreground"
           >
             <Eye className="h-6 w-6" />
           </Button>
@@ -173,14 +173,14 @@ export function BottomNavBar() {
           {/* Left: Social Links */}
           <div className="flex items-center gap-4">
             <a
-              href="https://x.com/vsol_fun"
+              href="https://x.com/SolanaSimx"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary transition-colors"
+              className="text-muted-foreground hover:text-brand transition-colors"
             >
               <XIcon className="h-4 w-4 hover:glow-primary" />
             </a>
-            <span className="text-xs text-muted-foreground">© 2025 VirtualSol</span>
+            <span className="text-xs text-muted-foreground">© 2025 Solana Sim</span>
           </div>
 
           {/* Center: Market Prices */}
@@ -210,18 +210,18 @@ export function BottomNavBar() {
               </div>
             ))}
             
-            {/* VSOL Token Info */}
+            {/* Solana Sim Logo */}
             <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted">
               <div className="flex items-center gap-1.5">
                 <div className="relative h-6 w-6">
                   <Image
-                    src="/Socials PFP-1.png"
-                    alt="VSOL Logo"
+                    src="/solana-sim-logo.png"
+                    alt="Solana Sim"
                     fill
                     className="object-contain"
                   />
                 </div>
-                <span className="text-xs font-semibold text-primary">vSOL</span>
+                <span className="text-xs font-semibold text-brand">SIM</span>
               </div>
               <span className="text-[10px] text-muted-foreground font-mono">
                 Coming Soon
@@ -236,7 +236,7 @@ export function BottomNavBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs font-medium hover:text-primary transition-colors flex items-center gap-1.5 h-8"
+                className="text-xs font-medium hover:text-brand transition-colors flex items-center gap-1.5 h-8"
               >
                 <Eye className="h-4 w-4" />
                 Wallet Tracker
@@ -247,7 +247,7 @@ export function BottomNavBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs font-medium hover:text-primary transition-colors flex items-center gap-1.5 h-8"
+                className="text-xs font-medium hover:text-brand transition-colors flex items-center gap-1.5 h-8"
               >
                 <Trophy className="h-4 w-4" />
                 Leaderboard
@@ -257,7 +257,7 @@ export function BottomNavBar() {
             {mounted ? (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-brand transition-colors"
                 aria-label="Toggle theme"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -267,7 +267,7 @@ export function BottomNavBar() {
             )}
             <Link
               href="/trade"
-              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              className="text-xs font-medium text-brand hover:text-brand/80 transition-colors flex items-center gap-1"
             >
               <TrendingUp className="h-3 w-3" />
               Quick Trade

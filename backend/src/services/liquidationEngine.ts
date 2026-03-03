@@ -11,6 +11,8 @@ import {
   calculatePerpFee,
 } from "../utils/margin.js";
 import redlock from "../plugins/redlock.js";
+import { loggers } from "../utils/logger.js";
+const logger = loggers.liquidation;
 
 // Liquidation engine state
 let isRunning = false;
@@ -22,12 +24,12 @@ const BATCH_SIZE = 50; // Process 50 positions at a time
 
 export async function startLiquidationEngine() {
   if (isRunning) {
-    console.log("[LiquidationEngine] Already running");
+    logger.info("Already running");
     return;
   }
 
   isRunning = true;
-  console.log("[LiquidationEngine] Starting...");
+  logger.info("Starting liquidation engine");
 
   // Run immediately
   await checkAndLiquidatePositions();
@@ -37,11 +39,11 @@ export async function startLiquidationEngine() {
     try {
       await checkAndLiquidatePositions();
     } catch (error) {
-      console.error("[LiquidationEngine] Error in periodic check:", error);
+      logger.error({ error }, "Error in periodic check");
     }
   }, CHECK_INTERVAL_MS);
 
-  console.log(`[LiquidationEngine] Running with ${CHECK_INTERVAL_MS}ms interval`);
+  logger.info({ intervalMs: CHECK_INTERVAL_MS }, "Running liquidation engine");
 }
 
 export async function stopLiquidationEngine() {
@@ -50,7 +52,7 @@ export async function stopLiquidationEngine() {
     engineInterval = null;
   }
   isRunning = false;
-  console.log("[LiquidationEngine] Stopped");
+  logger.info("Stopped");
 }
 
 export async function checkAndLiquidatePositions() {
@@ -72,7 +74,7 @@ export async function checkAndLiquidatePositions() {
 
     // Only log if there are multiple positions or if we haven't logged recently
     if (openPositions.length > 5) {
-      console.log(`[LiquidationEngine] Checking ${openPositions.length} positions`);
+      logger.info({ count: openPositions.length }, "Checking positions");
     }
 
     // Get all unique mints for batch price fetching
@@ -89,7 +91,7 @@ export async function checkAndLiquidatePositions() {
       try {
         const currentPrice = D(prices[position.mint] || 0);
         if (currentPrice.eq(0)) {
-          console.warn(`[LiquidationEngine] No price for ${position.mint}, skipping`);
+          logger.warn({ mint: position.mint.slice(0, 8) }, "No price available, skipping");
           continue;
         }
 
@@ -113,12 +115,9 @@ export async function checkAndLiquidatePositions() {
 
         // Check if should liquidate
         if (shouldLiquidate(marginBalance, positionValue)) {
-          console.log(
-            `[LiquidationEngine] ⚠️ Liquidating position ${position.id}: ` +
-            `user=${position.userId.substring(0, 8)}..., ` +
-            `side=${position.side}, ` +
-            `marginBalance=${marginBalance.toFixed(2)}, ` +
-            `required=${positionValue.mul(0.05).toFixed(2)}`
+          logger.info(
+            { positionId: position.id, userId: position.userId.substring(0, 8), side: position.side, marginBalance: marginBalance.toFixed(2) },
+            "Liquidating position"
           );
 
           await liquidatePosition(position.id, currentPrice);
@@ -141,12 +140,12 @@ export async function checkAndLiquidatePositions() {
           });
         }
       } catch (error) {
-        console.error(`[LiquidationEngine] Error checking position ${position.id}:`, error);
+        logger.error({ positionId: position.id, error }, "Error checking position");
       }
     }
 
     if (liquidatedCount > 0) {
-      console.log(`[LiquidationEngine] ⚡ Liquidated ${liquidatedCount} positions`);
+      logger.info({ count: liquidatedCount }, "Liquidated positions");
     }
 
     return {
@@ -154,7 +153,7 @@ export async function checkAndLiquidatePositions() {
       liquidated: liquidatedCount,
     };
   } catch (error) {
-    console.error("[LiquidationEngine] Error in checkAndLiquidatePositions:", error);
+    logger.error({ error }, "Error in checkAndLiquidatePositions");
     return { checked: 0, liquidated: 0 };
   }
 }
@@ -167,7 +166,7 @@ async function liquidatePosition(positionId: string, liquidationPrice: Decimal) 
   try {
     lock = await redlock.acquire([lockKey], 5000);
   } catch (error) {
-    console.error(`[LiquidationEngine] Failed to acquire lock for ${positionId}:`, error);
+    logger.error({ positionId, error }, "Failed to acquire lock");
     return;
   }
 
@@ -178,7 +177,7 @@ async function liquidatePosition(positionId: string, liquidationPrice: Decimal) 
     });
 
     if (!position || position.status !== "OPEN") {
-      console.log(`[LiquidationEngine] Position ${positionId} already closed or not found`);
+      logger.info({ positionId }, "Position already closed or not found");
       return;
     }
 
@@ -248,13 +247,12 @@ async function liquidatePosition(positionId: string, liquidationPrice: Decimal) 
       // For simplicity in simulation, all margin is lost
     });
 
-    console.log(
-      `[LiquidationEngine] ✅ Liquidated position ${positionId}: ` +
-      `loss=${marginLost.toFixed(4)} SOL, ` +
-      `price=${liquidationPrice.toFixed(6)}`
+    logger.info(
+      { positionId, lossSol: marginLost.toFixed(4), price: liquidationPrice.toFixed(6) },
+      "Liquidated position successfully"
     );
   } catch (error) {
-    console.error(`[LiquidationEngine] Failed to liquidate position ${positionId}:`, error);
+    logger.error({ positionId, error }, "Failed to liquidate position");
   } finally {
     await lock.release();
   }
@@ -271,6 +269,6 @@ export function getLiquidationEngineStatus() {
 
 // Force check (for testing or manual triggers)
 export async function forceCheckPositions() {
-  console.log("[LiquidationEngine] Force check triggered");
+  logger.info("Force check triggered");
   return await checkAndLiquidatePositions();
 }

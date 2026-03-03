@@ -17,7 +17,7 @@ function RewardsPageContent() {
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-page-xl mx-auto">
         {/* Enhanced Header */}
         <SimplePageHeader
-          title="vSOL Token Rewards"
+          title="SIM Token Rewards"
           subtitle="Earn rewards for your trading activity"
           icon={<Gift className="h-6 w-6 text-primary" />}
         />

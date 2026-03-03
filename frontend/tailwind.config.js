@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 
-// VirtualSol Design System - Tailwind Configuration
-// This file establishes the core design tokens for the VirtualSol Trading Platform
+// Solana Sim Design System - Tailwind Configuration
+// This file establishes the core design tokens for the Solana Sim Trading Platform
 
 module.exports = {
   darkMode: ["class"],
@@ -74,6 +74,13 @@ module.exports = {
           negative: "#EF4444", // Red 500 - Same as loss
         },
         
+        // Brand Accent - Warm Gold/Cream
+        brand: {
+          DEFAULT: "var(--brand)",
+          foreground: "var(--brand-foreground)",
+          muted: "var(--brand-muted)",
+        },
+
         // UI Semantic Colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

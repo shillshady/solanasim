@@ -14,7 +14,7 @@ import portfolioRoutes from "./routes/portfolio.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
 import trendingRoutes from "./routes/trending.js";
 import stocksRoutes from "./routes/stocks.js";
-import authRoutes from "./routes/auth.js";
+import authRoutes from "./routes/auth/index.js";
 import rewardsRoutes from "./routes/rewards.js";
 import tradesRoutes from "./routes/trades.js";
 import walletRoutes from "./routes/wallet.js";
@@ -30,20 +30,18 @@ import perpRoutes from "./routes/perpRoutes.js";
 
 // Import plugins and services
 import wsPlugin from "./plugins/ws.js";
-import wsTestPlugin from "./plugins/wsTest.js";
 import wsWalletTrackerPlugin from "./plugins/wsWalletTracker.js";
-// import priceService from "./plugins/priceService.js"; // Old service
-import priceService from "./plugins/priceService-optimized.js"; // Optimized with WebSocket monitoring
+import priceService from "./plugins/priceService-optimized.js";
 import { generalRateLimit } from "./plugins/rateLimiting.js";
 import { NonceCleanupService } from "./plugins/nonce.js";
 import { RateLimitCleanupService } from "./plugins/rateLimiting.js";
 import * as liquidationEngine from "./services/liquidationEngine.js";
 
-// Import production-ready plugins
 import { validateEnvironment, getConfig, isProduction } from "./utils/env.js";
 import healthPlugin from "./plugins/health.js";
-// import requestTrackingPlugin from "./plugins/requestTracking.js";
-// import productionRateLimitingPlugin, { productionRateLimits } from "./plugins/productionRateLimiting.js";
+import { loggers } from "./utils/logger.js";
+
+const logger = loggers.server;
 
 // Validate environment variables on startup (MUST be first)
 validateEnvironment();
@@ -82,8 +80,8 @@ app.register(helmet, {
         "https:",
         "https://api.birdeye.so",
         "https://api.dexscreener.com",
-        "https://virtualsol.fun",
-        "wss://virtualsol.fun"
+        "https://solanasim.fun",
+        "wss://solanasim.fun"
       ],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https:", "data:", "https://fonts.gstatic.com"],
@@ -129,9 +127,9 @@ app.register(helmet, {
 // CORS for frontend - support multiple origins with WebSocket support
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://virtualsol.fun",
-  "https://www.virtualsol.fun",
-  "https://virtualsol-production.vercel.app", // Add your Vercel deployment URL
+  "https://solanasim.fun",
+  "https://www.solanasim.fun",
+  "https://solanasim-production.vercel.app", // Add your Vercel deployment URL
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
@@ -139,28 +137,28 @@ app.register(cors, {
   origin: (origin, cb) => {
     // Allow requests with no origin (mobile apps, postman, etc.)
     if (!origin) {
-      console.log('✅ CORS accepted: no origin (mobile/postman)');
+      logger.debug('CORS accepted: no origin (mobile/postman)');
       return cb(null, true);
     }
-    
+
     if (allowedOrigins.includes(origin)) {
-      console.log('✅ CORS accepted from allowedOrigins:', origin);
+      logger.debug({ origin }, 'CORS accepted from allowedOrigins');
       return cb(null, true);
     }
-    
-    // Allow any subdomain of virtualsol.fun in production
-    if (origin.endsWith('.virtualsol.fun') || origin === 'https://virtualsol.fun') {
-      console.log('✅ CORS accepted (virtualsol.fun domain):', origin);
+
+    // Allow any subdomain of solanasim.fun in production
+    if (origin.endsWith('.solanasim.fun') || origin === 'https://solanasim.fun') {
+      logger.debug({ origin }, 'CORS accepted (solanasim.fun domain)');
       return cb(null, true);
     }
-    
-    // Allow Vercel preview deployments
-    if (origin.includes('vercel.app')) {
-      console.log('✅ CORS accepted (Vercel deployment):', origin);
+
+    // Allow Vercel preview deployments (project-specific only)
+    if (origin.match(/^https:\/\/solanasim[a-z0-9-]*\.vercel\.app$/)) {
+      logger.debug({ origin }, 'CORS accepted (Vercel deployment)');
       return cb(null, true);
     }
-    
-    console.log('🚫 CORS rejected origin:', origin);
+
+    logger.warn({ origin }, 'CORS rejected origin');
     // Return error instead of false to ensure proper headers are sent
     return cb(new Error('Not allowed by CORS'), false);
   },
@@ -173,8 +171,6 @@ app.register(cors, {
   optionsSuccessStatus: 204
 });
 
-// Production monitoring and tracking plugins
-// app.register(requestTrackingPlugin);
 app.register(healthPlugin);
 
 // WebSocket support - register BEFORE any other routes for proper Railway compatibility
@@ -188,12 +184,8 @@ app.register(websocket, {
 })
 
 // Register WebSocket routes BEFORE rate limiting
-app.register(wsTestPlugin) // Test WebSocket first for debugging
-app.register(wsPlugin) // Main price stream WebSocket
-app.register(wsWalletTrackerPlugin) // Wallet tracker WebSocket
-
-// Production rate limiting (replaces old rate limiting for better scale)
-// app.register(productionRateLimitingPlugin);
+app.register(wsPlugin)
+app.register(wsWalletTrackerPlugin)
 
 // Legacy rate limiting fallback for non-covered routes
 app.register(async function (app) {
@@ -229,7 +221,7 @@ app.register(adminRoutes, { prefix: "/api/admin" }); // Admin maintenance routes
 app.register(sentryTestRoutes); // Sentry test routes (dev only)
 
 // Start background services
-console.log("🚀 Starting background services...");
+logger.info("Starting background services");
 
 // Start cleanup services
 NonceCleanupService.start();
@@ -240,7 +232,7 @@ await priceService.start();
 
 // Start liquidation engine for perpetual trading
 await liquidationEngine.startLiquidationEngine();
-console.log("⚡ Liquidation engine started");
+logger.info("Liquidation engine started");
 
 const port = Number(process.env.PORT || 4000);
 
@@ -251,23 +243,24 @@ const gracefulShutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  console.log(`\n🛑 Received ${signal}, starting graceful shutdown...`);
+  logger.info({ signal }, "Received shutdown signal, starting graceful shutdown");
 
   try {
     // Stop accepting new connections
     await app.close();
     
     // Stop background services
-    console.log('⏹️  Stopping background services...');
+    logger.info("Stopping background services");
     NonceCleanupService.stop();
     RateLimitCleanupService.stop();
     await priceService.stop();
     await liquidationEngine.stopLiquidationEngine();
 
-    console.log('✅ Graceful shutdown completed');
-    process.exit(0);
+    logger.info("Graceful shutdown completed");
+    // Safety net: force exit after 5s if event loop doesn't drain
+    setTimeout(() => process.exit(0), 5000).unref();
   } catch (error) {
-    console.error('❌ Error during shutdown:', error);
+    logger.error({ err: error }, "Error during shutdown");
     process.exit(1);
   }
 };
@@ -278,7 +271,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
-  console.error('🚨 Uncaught Exception:', error);
+  logger.fatal({ err: error }, "Uncaught exception");
   // Send to Sentry before shutting down
   Sentry.captureException(error, {
     tags: { type: 'uncaughtException' },
@@ -288,25 +281,24 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
-  // Send to Sentry before shutting down
+  logger.error({ reason: String(reason) }, "Unhandled rejection");
+  // Log to Sentry but don't shut down — non-critical rejections shouldn't kill the server
   Sentry.captureException(new Error(`Unhandled Rejection: ${reason}`), {
     tags: { type: 'unhandledRejection' },
     level: 'error',
     extra: { promise, reason }
   });
-  gracefulShutdown('unhandledRejection');
 });
 
 app.listen({ port, host: "0.0.0.0" }).then(() => {
-  app.log.info(`🚀 VirtualSol API running on :${port}`);
-  app.log.info(`🔒 Security: JWT, Production Rate Limiting, Input Validation, Secure Nonces`);
-  app.log.info(`📊 Monitoring: Health checks, Request tracking, Error logging`);
-  app.log.info(`⚡ Performance: Redis caching, Database optimization, Connection pooling`);
+  logger.info({ port }, "Solana Sim API running");
+  logger.info("Security: JWT, Production Rate Limiting, Input Validation, Secure Nonces");
+  logger.info("Monitoring: Health checks, Request tracking, Error logging");
+  logger.info("Performance: Redis caching, Database optimization, Connection pooling");
 
   // Test Sentry connection on startup
   if (process.env.SENTRY_DSN) {
-    app.log.info(`🐛 Sentry error monitoring enabled`);
+    logger.info("Sentry error monitoring enabled");
     testSentryConnection();
   }
 });

@@ -5,9 +5,7 @@ import redis from "../plugins/redis.js";
 import { getTokenMetaBatch } from "./tokenService.js";
 import { portfolioCoalescer } from "../utils/requestCoalescer.js";
 import { Decimal } from "@prisma/client/runtime/library";
-
-// Helper to create Decimal safely
-const D = (x: Decimal | number | string) => new Decimal(x);
+import { D } from "../utils/pnl.js";
 
 // Smart number formatting for memecoin prices
 function formatPrice(price: Decimal): string {
@@ -148,9 +146,9 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
           currentPrice = D(individualPrice);
         }
         // If still 0, it's cached in negative cache - no need to log
-      } catch (err) {
+      } catch (err: any) {
         // Only log unexpected errors
-        if (!err.message?.includes('aborted') && !err.message?.includes('404')) {
+        if (!err?.message?.includes('aborted') && !err?.message?.includes('404')) {
           console.error(`[Portfolio] Unexpected error fetching price for ${position.mint.slice(0, 8)}:`, err);
         }
       }
@@ -199,25 +197,17 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
     totalUnrealizedUsd = totalUnrealizedUsd.add(unrealizedUsd);
   }
 
-  // Get total realized PnL and trading stats in a single batch
-  // OPTIMIZATION: Fetch realized PnL records once and calculate both aggregate and stats
-  const realizedPnlRecords = await prisma.realizedPnL.findMany({
-    where: { userId },
-    select: { pnl: true }
-  });
+  // Aggregate realized PnL and trading stats with DB-level queries (no row fetching)
+  const [pnlAggregate, totalTrades, winningTrades] = await Promise.all([
+    prisma.realizedPnL.aggregate({
+      where: { userId },
+      _sum: { pnl: true }
+    }),
+    prisma.realizedPnL.count({ where: { userId } }),
+    prisma.realizedPnL.count({ where: { userId, pnl: { gt: 0 } } })
+  ]);
 
-  // Calculate total realized PnL
-  const totalRealizedPnl = realizedPnlRecords.reduce((sum, record) => {
-    const pnl = record.pnl as Decimal;
-    return sum.add(pnl);
-  }, D(0));
-
-  // Calculate trading stats from the same data (no extra query needed)
-  const totalTrades = realizedPnlRecords.length;
-  const winningTrades = realizedPnlRecords.filter(record => {
-    const pnl = record.pnl as Decimal;
-    return pnl.gt(0);
-  }).length;
+  const totalRealizedPnl = pnlAggregate._sum.pnl ? D(pnlAggregate._sum.pnl.toString()) : D(0);
   const losingTrades = totalTrades - winningTrades;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
@@ -332,17 +322,12 @@ export async function getPortfolioTradingStats(userId: string) {
     console.warn(`Redis cache miss for trading stats ${userId}:`, error);
   }
 
-  // Get all realized PnL records for win rate calculation
-  const realizedPnlRecords = await prisma.realizedPnL.findMany({
-    where: { userId },
-    select: { pnl: true }
-  });
+  // Aggregate trading stats with DB-level queries
+  const [totalTrades, winningTrades] = await Promise.all([
+    prisma.realizedPnL.count({ where: { userId } }),
+    prisma.realizedPnL.count({ where: { userId, pnl: { gt: 0 } } })
+  ]);
 
-  const totalTrades = realizedPnlRecords.length;
-  const winningTrades = realizedPnlRecords.filter(record => {
-    const pnl = record.pnl as Decimal;
-    return pnl.gt(0);
-  }).length;
   const losingTrades = totalTrades - winningTrades;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 

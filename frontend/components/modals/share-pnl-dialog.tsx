@@ -45,7 +45,7 @@ export function SharePnLDialog({ totalPnL, totalPnLPercent, currentValue, initia
       })
 
       const link = document.createElement("a")
-      link.download = `virtualsol-pnl-${Date.now()}.png`
+      link.download = `solanasim-pnl-${Date.now()}.png`
       link.href = dataUrl
       link.click()
     } catch (error) {
@@ -219,12 +219,12 @@ export function SharePnLDialog({ totalPnL, totalPnLPercent, currentValue, initia
                   )}
                   <div>
                     <div className="text-white font-bold text-xs">@{userHandle || userEmail?.split('@')[0] || 'trader'}</div>
-                    <div className="text-[9px] text-primary font-medium">virtualsol.fun</div>
+                    <div className="text-[9px] text-primary font-medium">solanasim.fun</div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-[8px] text-white/40">Powered by</div>
-                  <div className="text-[10px] font-bold text-primary">vSOL</div>
+                  <div className="text-[10px] font-bold text-primary">SIM</div>
                 </div>
               </div>
             </div>

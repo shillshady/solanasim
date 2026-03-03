@@ -1,7 +1,7 @@
 /**
  * Standardized Table Cell Components (Production Ready)
  *
- * Consistent cell patterns following the VirtualSol table specification:
+ * Consistent cell patterns following the Solana Sim table specification:
  * - Primary line: bold USD value (compact if large)
  * - Secondary line (muted): quantity + symbol
  * - SOL equivalent when space allows

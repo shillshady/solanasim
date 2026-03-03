@@ -1,6 +1,9 @@
 // Secure nonce handling with Redis TTL
 import crypto from 'crypto';
 import redis from './redis.js';
+import { loggers } from "../utils/logger.js";
+
+const logger = loggers.nonce;
 
 const NONCE_TTL = 300; // 5 minutes in seconds
 const MAX_NONCE_ATTEMPTS = 3; // Maximum nonce generation attempts per wallet per hour
@@ -26,11 +29,11 @@ export class NonceService {
       // Track nonce generation attempts
       await this.incrementNonceAttempts(walletAddress);
       
-      console.log(`🔐 Generated nonce for wallet ${walletAddress.slice(0, 8)}... (expires in ${NONCE_TTL}s)`);
+      logger.info({ wallet: walletAddress.slice(0, 8), ttl: NONCE_TTL }, "Nonce generated");
       
       return nonce;
     } catch (error: any) {
-      console.error('Failed to generate nonce:', error);
+      logger.error({ error }, "Failed to generate nonce");
       throw new Error(error.message || 'Failed to generate authentication nonce');
     }
   }
@@ -42,22 +45,22 @@ export class NonceService {
       const storedNonce = await redis.get(nonceKey);
       
       if (!storedNonce) {
-        console.warn(`⚠️ Nonce verification failed: No nonce found for wallet ${walletAddress.slice(0, 8)}...`);
+        logger.warn({ wallet: walletAddress.slice(0, 8) }, "Nonce verification failed: not found");
         return false;
       }
 
       if (storedNonce !== providedNonce) {
-        console.warn(`⚠️ Nonce verification failed: Invalid nonce for wallet ${walletAddress.slice(0, 8)}...`);
+        logger.warn({ wallet: walletAddress.slice(0, 8) }, "Nonce verification failed: invalid");
         return false;
       }
 
       // Nonce is valid - consume it (delete from Redis)
       await redis.del(nonceKey);
       
-      console.log(`✅ Nonce verified and consumed for wallet ${walletAddress.slice(0, 8)}...`);
+      logger.info({ wallet: walletAddress.slice(0, 8) }, "Nonce verified and consumed");
       return true;
     } catch (error: any) {
-      console.error('Failed to verify nonce:', error);
+      logger.error({ error }, "Failed to verify nonce");
       return false;
     }
   }
@@ -69,7 +72,7 @@ export class NonceService {
       const nonce = await redis.get(nonceKey);
       return nonce !== null;
     } catch (error) {
-      console.error('Failed to check nonce existence:', error);
+      logger.error({ error }, "Failed to check nonce existence");
       return false;
     }
   }
@@ -80,7 +83,7 @@ export class NonceService {
       const nonceKey = `nonce:${walletAddress}`;
       return await redis.ttl(nonceKey);
     } catch (error) {
-      console.error('Failed to get nonce TTL:', error);
+      logger.error({ error }, "Failed to get nonce TTL");
       return -1;
     }
   }
@@ -96,7 +99,7 @@ export class NonceService {
         await redis.expire(attemptsKey, NONCE_ATTEMPT_WINDOW);
       }
     } catch (error) {
-      console.error('Failed to increment nonce attempts:', error);
+      logger.error({ error }, "Failed to increment nonce attempts");
     }
   }
 
@@ -107,7 +110,7 @@ export class NonceService {
       const attempts = await redis.get(attemptsKey);
       return attempts ? parseInt(attempts, 10) : 0;
     } catch (error) {
-      console.error('Failed to get nonce attempts:', error);
+      logger.error({ error }, "Failed to get nonce attempts");
       return 0;
     }
   }
@@ -115,8 +118,8 @@ export class NonceService {
   // Clean up expired nonces (maintenance function)
   static async cleanupExpiredNonces(): Promise<number> {
     try {
-      const pattern = 'nonce:*';
-      const keys = await redis.keys(pattern);
+      const { scanKeys } = await import("../utils/redis-helpers.js");
+      const keys = await scanKeys('nonce:*');
       let cleaned = 0;
 
       for (const key of keys) {
@@ -127,13 +130,9 @@ export class NonceService {
         }
       }
 
-      if (cleaned > 0) {
-        console.log(`🧹 Cleaned up ${cleaned} expired nonces`);
-      }
-
       return cleaned;
     } catch (error) {
-      console.error('Failed to cleanup expired nonces:', error);
+      logger.error({ error }, "Failed to cleanup expired nonces");
       return 0;
     }
   }
@@ -141,11 +140,11 @@ export class NonceService {
   // Get nonce statistics (for monitoring)
   static async getStatistics(): Promise<{
     activeNonces: number;
-    expiringSoon: number; // Expiring in next 60 seconds
+    expiringSoon: number;
   }> {
     try {
-      const pattern = 'nonce:*';
-      const keys = await redis.keys(pattern);
+      const { scanKeys } = await import("../utils/redis-helpers.js");
+      const keys = await scanKeys('nonce:*');
       let expiringSoon = 0;
 
       for (const key of keys) {
@@ -160,7 +159,7 @@ export class NonceService {
         expiringSoon
       };
     } catch (error) {
-      console.error('Failed to get nonce statistics:', error);
+      logger.error({ error }, "Failed to get nonce statistics");
       return { activeNonces: 0, expiringSoon: 0 };
     }
   }
@@ -168,13 +167,13 @@ export class NonceService {
   // Create Sign-In With Solana message
   static createSIWSMessage(walletAddress: string, nonce: string, domain?: string): string {
     const timestamp = new Date().toISOString();
-    const domainName = domain || 'virtualsol.fun';
+    const domainName = domain || 'solanasim.fun';
     
     return [
       `${domainName} wants you to sign in with your Solana account:`,
       walletAddress,
       '',
-      'Welcome to VirtualSol - the ultimate Solana paper trading simulator!',
+      'Welcome to Solana Sim - the ultimate Solana paper trading simulator!',
       '',
       `URI: https://${domainName}`,
       `Version: 1`,
@@ -196,13 +195,13 @@ export class NonceCleanupService {
       return; // Already running
     }
 
-    console.log('🧹 Starting nonce cleanup service...');
+    logger.info("Starting nonce cleanup service");
     
     this.interval = setInterval(async () => {
       try {
         await NonceService.cleanupExpiredNonces();
       } catch (error) {
-        console.error('Nonce cleanup service error:', error);
+        logger.error({ error }, "Nonce cleanup service error");
       }
     }, this.CLEANUP_INTERVAL);
   }
@@ -211,7 +210,7 @@ export class NonceCleanupService {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
-      console.log('🛑 Stopped nonce cleanup service');
+      logger.info("Stopped nonce cleanup service");
     }
   }
 }

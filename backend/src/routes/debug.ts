@@ -1,6 +1,7 @@
 // Debug routes for price service monitoring
 import { FastifyInstance } from "fastify";
 import priceService from "../plugins/priceService.js";
+import logger from "../utils/logger.js";
 
 export default async function debugRoutes(app: FastifyInstance) {
   // Debug endpoint to check price service status
@@ -16,7 +17,7 @@ export default async function debugRoutes(app: FastifyInstance) {
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error("❌ Debug price service error:", error);
+      logger.error({ error }, "Debug price service error");
       return reply.code(500).send({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error"
@@ -27,7 +28,7 @@ export default async function debugRoutes(app: FastifyInstance) {
   // Force price update for testing
   app.post("/api/debug/force-price-update", async (request, reply) => {
     try {
-      console.log("🔄 Forcing price update via debug endpoint...");
+      logger.info("Forcing price update via debug endpoint");
       
       // Trigger SOL price update manually
       await (priceService as any).updateSolPrice();
@@ -41,7 +42,7 @@ export default async function debugRoutes(app: FastifyInstance) {
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error("❌ Force price update error:", error);
+      logger.error({ error }, "Force price update error");
       return reply.code(500).send({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error"
@@ -61,7 +62,7 @@ export default async function debugRoutes(app: FastifyInstance) {
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error("❌ WebSocket subscriber debug error:", error);
+      logger.error({ error }, "WebSocket subscriber debug error");
       return reply.code(500).send({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error"
