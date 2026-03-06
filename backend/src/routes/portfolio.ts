@@ -20,7 +20,7 @@ export default async function (app: FastifyInstance) {
       const data = await getPortfolio(userId);
       return data;
     } catch (error) {
-      logger.error("Portfolio fetch error:", error);
+      logger.error({ err: error }, "Portfolio fetch error");
       return reply.code(500).send({
         error: "Failed to fetch portfolio data"
       });
@@ -35,7 +35,7 @@ export default async function (app: FastifyInstance) {
       const data = await getPortfolioWithRealTimePrices(userId);
       return data;
     } catch (error) {
-      logger.error("Real-time portfolio fetch error:", error);
+      logger.error({ err: error }, "Real-time portfolio fetch error");
       return reply.code(500).send({
         error: "Failed to fetch real-time portfolio data"
       });
@@ -50,7 +50,7 @@ export default async function (app: FastifyInstance) {
       const stats = await getPortfolioTradingStats(userId);
       return stats;
     } catch (error) {
-      logger.error("Portfolio stats fetch error:", error);
+      logger.error({ err: error }, "Portfolio stats fetch error");
       return reply.code(500).send({
         error: "Failed to fetch portfolio statistics"
       });
@@ -67,7 +67,7 @@ export default async function (app: FastifyInstance) {
       const performance = await getPortfolioPerformance(userId, days);
       return { performance };
     } catch (error) {
-      logger.error("Portfolio performance fetch error:", error);
+      logger.error({ err: error }, "Portfolio performance fetch error");
       return reply.code(500).send({
         error: "Failed to fetch portfolio performance"
       });
