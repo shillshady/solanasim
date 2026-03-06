@@ -233,9 +233,8 @@ export function TokenPositionPnL({ tokenAddress, tokenSymbol, tokenName }: Token
     if (!tokenPosition || !livePrice) return null
     
     const qty = parseFloat(tokenPosition.qty)
-    const avgCost = parseFloat(tokenPosition.avgCostUsd)
     const currentValue = qty * livePrice.price
-    const costBasis = avgCost * qty
+    const costBasis = parseFloat(tokenPosition.costBasisRaw || '0') || (parseFloat(tokenPosition.avgCostUsd) * qty)
     const unrealizedPnL = currentValue - costBasis
     
     // Guard against division by zero
@@ -254,7 +253,7 @@ export function TokenPositionPnL({ tokenAddress, tokenSymbol, tokenName }: Token
     unrealizedPnL: tokenPosition ? parseFloat(tokenPosition.unrealizedUsd) : 0,
     unrealizedPercent: tokenPosition ? parseFloat(tokenPosition.unrealizedPercent) : 0,
     currentValue: tokenPosition ? parseFloat(tokenPosition.valueUsd) : 0,
-    costBasis: tokenPosition ? parseFloat(tokenPosition.avgCostUsd) * parseFloat(tokenPosition.qty) : 0
+    costBasis: tokenPosition ? parseFloat(tokenPosition.costBasisRaw || '0') || (parseFloat(tokenPosition.avgCostUsd) * parseFloat(tokenPosition.qty)) : 0
   }
 
   // Guard against invalid values
@@ -512,7 +511,7 @@ export function TokenPositionPnL({ tokenAddress, tokenSymbol, tokenName }: Token
                 ].map((target) => {
                   const targetPrice = parseFloat(tokenPosition.avgCostUsd) * target.multiplier
                   const targetValue = parseFloat(tokenPosition.qty) * targetPrice
-                  const targetProfit = targetValue - (parseFloat(tokenPosition.qty) * parseFloat(tokenPosition.avgCostUsd))
+                  const targetProfit = targetValue - (parseFloat(tokenPosition.costBasisRaw || '0') || (parseFloat(tokenPosition.qty) * parseFloat(tokenPosition.avgCostUsd)))
 
                   return (
                     <div key={target.label} className="flex items-center justify-between text-sm p-2 rounded bg-muted/20 hover:bg-muted/30 transition-colors">

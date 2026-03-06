@@ -58,7 +58,7 @@ export function useRealtimePortfolio() {
       // Recalculate value and P&L with live price
       const avgCostUsd = parseFloat(position.avgCostUsd)
       const valueUsd = qty * currentPrice
-      const costBasis = qty * avgCostUsd
+      const costBasis = parseFloat(position.costBasisRaw || '0') || (qty * avgCostUsd)
       const unrealizedUsd = valueUsd - costBasis
       const unrealizedPercent = costBasis > 0 ? (unrealizedUsd / costBasis) * 100 : 0
 

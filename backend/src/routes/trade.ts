@@ -69,7 +69,7 @@ export default async function (app: FastifyInstance) {
           costBasis: result.position.costBasis.toString(),
           currentPrice: currentTick.priceUsd.toString(),
           unrealizedPnL: result.position.qty.mul(currentTick.priceUsd).sub(
-            result.position.qty.mul(result.position.costBasis)
+            result.position.costBasis
           ).toString()
         },
         portfolioTotals: {

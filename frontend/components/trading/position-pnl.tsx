@@ -68,9 +68,8 @@ export function PositionPnL({ tokenAddress, tokenSymbol, tokenName }: PositionPn
     if (!tokenPosition || !livePrice) return null
 
     const qty = parseFloat(tokenPosition.qty)
-    const avgCost = parseFloat(tokenPosition.avgCostUsd)
     const currentValue = qty * livePrice.price
-    const costBasis = avgCost * qty
+    const costBasis = parseFloat(tokenPosition.costBasisRaw || '0') || (parseFloat(tokenPosition.avgCostUsd) * qty)
     const unrealizedPnL = currentValue - costBasis
 
     // Guard against division by zero
@@ -89,7 +88,7 @@ export function PositionPnL({ tokenAddress, tokenSymbol, tokenName }: PositionPn
     unrealizedPnL: tokenPosition ? parseFloat(tokenPosition.unrealizedUsd) : 0,
     unrealizedPercent: tokenPosition ? parseFloat(tokenPosition.unrealizedPercent) : 0,
     currentValue: tokenPosition ? parseFloat(tokenPosition.valueUsd) : 0,
-    costBasis: tokenPosition ? parseFloat(tokenPosition.avgCostUsd) * parseFloat(tokenPosition.qty) : 0
+    costBasis: tokenPosition ? parseFloat(tokenPosition.costBasisRaw || '0') || (parseFloat(tokenPosition.avgCostUsd) * parseFloat(tokenPosition.qty)) : 0
   }
 
   // Guard against invalid values

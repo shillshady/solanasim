@@ -108,7 +108,7 @@ export function PositionCard({ position }: PositionCardProps) {
         <PnLDisplay
           pnlUSD={position.livePnL || 0}
           costBasisUSD={
-            parseFloat(position.avgCostUsd) * parseFloat(position.qty)
+            parseFloat(position.costBasisRaw || '0') || (parseFloat(position.avgCostUsd) * parseFloat(position.qty))
           }
           showSol={true}
           className="text-right"

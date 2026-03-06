@@ -238,22 +238,31 @@ async function executeTradeLogic({
 
     let realizedPnL = D(0);
 
+    // Calculate per-unit cost including fees for accurate PnL tracking
+    const feePerTokenUsd = totalFees.mul(solUsdAtFill).div(q); // Fee per token in USD
+    const unitCostWithFeesUsd = side === "BUY"
+      ? priceUsd.plus(feePerTokenUsd)   // Buy: cost = price + fees
+      : priceUsd;                        // Sell: fee deducted from proceeds, not cost
+    const unitCostWithFeesSol = side === "BUY"
+      ? priceSol.plus(totalFees.div(q))  // Buy: SOL cost per token + fee per token
+      : priceSol;
+
     if (side === "BUY") {
-      // Create new lot for FIFO tracking with frozen FX rates
+      // Create new lot for FIFO tracking with frozen FX rates (fees included in cost)
       await tx.positionLot.create({
-        data: { 
+        data: {
           positionId: pos.id,
-          userId, 
-          mint, 
-          qtyRemaining: q, 
-          unitCostUsd: priceUsd,
-          unitCostSol: priceSol,
+          userId,
+          mint,
+          qtyRemaining: q,
+          unitCostUsd: unitCostWithFeesUsd,
+          unitCostSol: unitCostWithFeesSol,
           solUsdAtBuy: solUsdAtFill // Freeze SOL→USD FX at buy time
         }
       });
 
-      // Update position using VWAP
-      const newVWAP = vwapBuy(pos.qty as Decimal, pos.costBasis as Decimal, q, priceUsd);
+      // Update position using VWAP (with fee-inclusive cost)
+      const newVWAP = vwapBuy(pos.qty as Decimal, pos.costBasis as Decimal, q, unitCostWithFeesUsd);
       pos = await tx.position.update({
         where: { userId_mint: { userId, mint } },
         data: {
@@ -279,6 +288,9 @@ async function executeTradeLogic({
         orderBy: { createdAt: "asc" }
       });
 
+      // Use net-of-fees price for realized PnL: sellPrice - (fees / qty)
+      const netSellPriceUsd = priceUsd.minus(feePerTokenUsd);
+
       const { realized, consumed } = fifoSell(
         lots.map((l: any) => ({
           id: l.id,
@@ -286,7 +298,7 @@ async function executeTradeLogic({
           unitCostUsd: l.unitCostUsd as Decimal
         })),
         q,
-        priceUsd
+        netSellPriceUsd
       );
 
       realizedPnL = realized;
@@ -332,11 +344,13 @@ async function executeTradeLogic({
         data: { qty: newQty, costBasis: newBasis }
       });
 
-      // Calculate realized PnL in both SOL and USD (frozen at sell time)
+      // Calculate realized PnL in SOL (frozen at sell time)
+      // netSol already has fees deducted, so netSol/q = net proceeds per token in SOL
+      const netProceedsPerTokenSol = netSol.div(q);
       const realizedPnLSol = consumed.reduce((sum, c) => {
         const lot = lots.find((l: any) => l.id === c.lotId)!;
-        const costSOL = c.qty.mul(lot.unitCostSol || priceSol);
-        const proceedsSOL = c.qty.mul(netSol.div(q)); // Proportional proceeds
+        const costSOL = c.qty.mul(lot.unitCostSol || unitCostWithFeesSol);
+        const proceedsSOL = c.qty.mul(netProceedsPerTokenSol);
         return sum.plus(proceedsSOL.minus(costSOL));
       }, D(0));
 

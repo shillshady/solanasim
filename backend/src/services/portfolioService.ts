@@ -41,6 +41,7 @@ export interface PortfolioPosition {
   mint: string;
   qty: string;
   avgCostUsd: string;
+  costBasisRaw: string; // Full-precision total cost basis for accurate recalculation
   valueUsd: string;
   unrealizedUsd: string;
   unrealizedPercent: string;
@@ -91,10 +92,11 @@ export async function getPortfolio(userId: string): Promise<PortfolioResponse> {
   return portfolioCoalescer.coalesce(
     `portfolio:${userId}`,
     async () => {
-      // Get user's positions (including closed positions with trade history)
+      // Get user's open positions only (closed positions have qty=0)
       const positions = await prisma.position.findMany({
         where: {
-          userId
+          userId,
+          qty: { gt: 0 }
         }
       });
 
@@ -178,6 +180,7 @@ async function calculatePortfolioData(userId: string, positions: any[]): Promise
       mint: position.mint,
       qty: qty.toString(), // Use full precision, let frontend handle formatting
       avgCostUsd: formatPrice(avgCostUsd), // Smart formatting for avg cost
+      costBasisRaw: costBasis.toString(), // Full precision for recalculations
       valueUsd: formatUsdValue(valueUsd), // Smart formatting for position value
       unrealizedUsd: unrealizedUsd.toFixed(2), // 2 decimals for PnL
       unrealizedPercent: unrealizedPercent.toFixed(2), // 2 decimals for percentage
@@ -364,8 +367,7 @@ export async function getPortfolioWithRealTimePrices(userId: string): Promise<Po
     const latestPrice = latestPrices[position.mint];
     if (latestPrice && latestPrice > 0) {
       const qty = D(position.qty);
-      const avgCost = D(position.avgCostUsd);
-      const costBasis = qty.mul(avgCost);
+      const costBasis = D(position.costBasisRaw); // Use full-precision cost basis
       const currentPrice = D(latestPrice);
 
       const newValueUsd = qty.mul(currentPrice);

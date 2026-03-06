@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { EmptyState } from "@/components/shared/empty-state"
+import { ErrorState } from "@/components/shared/error-state"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +43,7 @@ import { usePortfolio } from "@/hooks/use-portfolio"
 import { cn } from "@/lib/utils"
 import { ProfitLossValue, PortfolioValue } from "@/components/ui/financial-value"
 import { AuthCTA } from "@/components/auth/auth-cta"
+import { SOL_MINT } from "@/lib/constants"
 import type { EnhancedPosition } from "./types"
 
 // Enhanced position with live price data for display
@@ -186,10 +189,87 @@ const PositionRow = memo(function PositionRow({
   )
 })
 
+// PERFORMANCE: Memoized compact position row for sidebar
+const CompactPositionRow = memo(function CompactPositionRow({
+  position,
+  index,
+}: {
+  position: LiveEnhancedPosition
+  index: number
+}) {
+  const unrealizedPnL = position.liveUnrealizedUsd || 0
+  const isPositive = unrealizedPnL >= 0
+  const currentValue = position.currentValueUsd || 0
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+    >
+      <Link
+        href={`/trade?token=${position.mint}&symbol=${position.tokenSymbol}&name=${position.tokenName}`}
+        className="block"
+      >
+        <div className="p-3 rounded-lg border border-border hover:border-primary/50 transition-colors group">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {position.tokenImage ? (
+                <img
+                  src={position.tokenImage}
+                  alt={position.tokenSymbol || 'Token'}
+                  className="w-6 h-6 rounded-full flex-shrink-0"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                  {position.tokenSymbol?.slice(0, 2) || '??'}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium truncate">
+                    {position.tokenSymbol || 'Unknown'}
+                  </span>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {formatAmount(position.qty)} tokens
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right flex-shrink-0">
+              <UsdWithSol
+                usd={currentValue}
+                className="text-sm font-medium"
+                solClassName="text-xs"
+              />
+              <div className={cn(
+                "text-xs font-medium",
+                isPositive ? "text-profit" : "text-loss"
+              )}>
+                <UsdWithSol
+                  usd={unrealizedPnL}
+                  prefix={isPositive ? "+" : ""}
+                  className="text-xs"
+                  solClassName="text-xs"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  )
+})
+
 // Helper functions
 const formatAmount = (amount: string): string => {
   const num = parseFloat(amount)
-  return formatTokenQuantity(num) // Use formatTokenQuantity for large token amounts
+  return formatTokenQuantity(num)
 }
 
 // Using formatPriceUSD and formatUSD from lib/format.ts
@@ -217,27 +297,28 @@ export const UnifiedPositions = memo(function UnifiedPositions({
 
   // Real-time price stream integration
   const { connected: wsConnected, prices: livePrices, subscribeMany, unsubscribeMany } = usePriceStreamContext()
-  
-  // Get SOL price for conversions (SOL mint address)
-  const solPrice = livePrices.get('So11111111111111111111111111111111111111112')?.price || 0
-  
-  // Subscribe to price updates for all positions
-  useEffect(() => {
-    if (portfolio?.positions && wsConnected) {
-      const mints = portfolio.positions.map(p => p.mint)
-      subscribeMany(mints)
-      
-      return () => {
-        unsubscribeMany(mints)
-      }
-    }
-  }, [portfolio?.positions, wsConnected, subscribeMany, unsubscribeMany])
 
-  // Get all mints for metadata fetching
-  const mints = useMemo(() => 
-    portfolio?.positions?.map(p => p.mint) || [], 
+  // Get SOL price for conversions (SOL mint address)
+  const solPrice = livePrices.get(SOL_MINT)?.price || 0
+
+  // Stabilize mints list — only changes when the actual set of mints changes, not on every refetch
+  const mintsCacheKey = useMemo(() =>
+    portfolio?.positions?.map(p => p.mint).sort().join(',') || '',
     [portfolio?.positions]
   )
+  const mints = useMemo(() =>
+    portfolio?.positions?.map(p => p.mint) || [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mintsCacheKey]
+  )
+
+  // Subscribe to price updates — only re-runs when mints actually change
+  useEffect(() => {
+    if (mints.length > 0 && wsConnected) {
+      subscribeMany(mints)
+      return () => { unsubscribeMany(mints) }
+    }
+  }, [mints, wsConnected, subscribeMany, unsubscribeMany])
 
   // Fetch token metadata for all positions
   const { data: metadataResults } = useTokenMetadataBatch(mints, mints.length > 0)
@@ -277,8 +358,8 @@ export const UnifiedPositions = memo(function UnifiedPositions({
         // For current value: use live calculation if live price available, otherwise use backend value
         const currentValueUsd = livePrice?.price ? positionQty * livePrice.price : backendValueUsd
         
-        // Cost basis and PnL calculations
-        const costBasisUsd = positionQty * avgCostUsd
+        // Cost basis and PnL calculations (prefer full-precision costBasisRaw)
+        const costBasisUsd = parseFloat(position.costBasisRaw || '0') || (positionQty * avgCostUsd)
         const liveUnrealizedUsd = currentValueUsd - costBasisUsd
         const liveUnrealizedPercent = costBasisUsd > 0 ? (liveUnrealizedUsd / costBasisUsd) * 100 : 0
         
@@ -401,20 +482,11 @@ export const UnifiedPositions = memo(function UnifiedPositions({
           </CardHeader>
         )}
         <CardContent className={showHeader ? "pt-0" : undefined}>
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              Failed to load portfolio: {error instanceof Error ? error.message : 'Unknown error'}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="ml-2 h-6"
-                onClick={handleRefresh}
-              >
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorState
+            message={error instanceof Error ? error.message : 'Failed to load portfolio'}
+            onRetry={handleRefresh}
+            isRetrying={isRefreshing || isRefetching}
+          />
         </CardContent>
       </Card>
     )
@@ -433,16 +505,10 @@ export const UnifiedPositions = memo(function UnifiedPositions({
           </CardHeader>
         )}
         <CardContent className={showHeader ? "pt-0" : undefined}>
-          <div className="text-center py-6">
-            <Wallet className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground mb-1">No active positions</p>
-            <p className="text-xs text-muted-foreground mb-4">
-              Start trading to build your portfolio
-            </p>
-            <Link href="/trade">
-              <Button size="sm">Start Trading</Button>
-            </Link>
-          </div>
+          <EmptyState
+            variant="portfolio"
+            action={{ label: "Start Trading", href: "/trade" }}
+          />
         </CardContent>
       </Card>
     )
@@ -479,76 +545,13 @@ export const UnifiedPositions = memo(function UnifiedPositions({
         
         <CardContent className={showHeader ? "pt-0" : undefined}>
           <div className="space-y-2">
-            {enhancedPositions.map((position, index) => {
-              const unrealizedPnL = position.liveUnrealizedUsd || 0
-              const isPositive = unrealizedPnL >= 0
-              const currentValue = position.currentValueUsd || 0
-              
-              return (
-                <motion.div
-                  key={position.mint}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Link 
-                    href={`/trade?token=${position.mint}&symbol=${position.tokenSymbol}&name=${position.tokenName}`}
-                    className="block"
-                  >
-                    <div className="p-3 rounded-lg border border-border hover:border-primary/50 transition-colors group">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {position.tokenImage ? (
-                            <img 
-                              src={position.tokenImage} 
-                              alt={position.tokenSymbol || 'Token'} 
-                              className="w-6 h-6 rounded-full flex-shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none'
-                              }}
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                              {position.tokenSymbol?.slice(0, 2) || '??'}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1">
-                              <span className="text-sm font-medium truncate">
-                                {position.tokenSymbol || 'Unknown'}
-                              </span>
-                              <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatAmount(position.qty)} tokens
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right flex-shrink-0">
-                          <UsdWithSol 
-                            usd={currentValue}
-                            className="text-sm font-medium"
-                            solClassName="text-xs"
-                          />
-                          <div className={cn(
-                            "text-xs font-medium",
-                            isPositive ? "text-profit" : "text-loss"
-                          )}>
-                            <UsdWithSol 
-                              usd={unrealizedPnL}
-                              prefix={isPositive ? "+" : ""}
-                              className="text-xs"
-                              solClassName="text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              )
-            })}
+            {enhancedPositions.map((position, index) => (
+              <CompactPositionRow
+                key={position.mint}
+                position={position}
+                index={index}
+              />
+            ))}
           </div>
           
           {showViewAllButton && liveTotals && liveTotals.allPositionsCount > liveTotals.positionCount && (

@@ -185,6 +185,7 @@ export interface PortfolioPosition {
   mint: string;
   qty: string;
   avgCostUsd: string;
+  costBasisRaw: string; // Full-precision total cost basis
   valueUsd: string;
   unrealizedUsd: string;
   unrealizedPercent: string;
