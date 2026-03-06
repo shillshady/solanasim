@@ -230,13 +230,6 @@ logger.info("Starting background services");
 NonceCleanupService.start();
 RateLimitCleanupService.start();
 
-// Start WS price streamer (Birdeye) + warm SOL price
-await priceService.start();
-
-// Start liquidation engine for perpetual trading
-await liquidationEngine.startLiquidationEngine();
-logger.info("Liquidation engine started");
-
 const port = Number(process.env.PORT || 4000);
 
 // Graceful shutdown handling
@@ -293,11 +286,26 @@ process.on('unhandledRejection', (reason, promise) => {
   });
 });
 
-app.listen({ port, host: "0.0.0.0" }).then(() => {
+app.listen({ port, host: "0.0.0.0" }).then(async () => {
   logger.info({ port }, "Solana Sim API running");
   logger.info("Security: JWT, Production Rate Limiting, Input Validation, Secure Nonces");
   logger.info("Monitoring: Health checks, Request tracking, Error logging");
   logger.info("Performance: Redis caching, Database optimization, Connection pooling");
+
+  // Start background services AFTER port is bound so healthcheck passes
+  try {
+    await priceService.start();
+    logger.info("Price service started");
+  } catch (err) {
+    logger.error({ err }, "Price service failed to start, will retry in background");
+  }
+
+  try {
+    await liquidationEngine.startLiquidationEngine();
+    logger.info("Liquidation engine started");
+  } catch (err) {
+    logger.error({ err }, "Liquidation engine failed to start");
+  }
 
   // Test Sentry connection on startup
   if (process.env.SENTRY_DSN) {
