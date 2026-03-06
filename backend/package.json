@@ -65,6 +65,12 @@
     "ts-jest": "^29.2.5",
     "tsx": "^4.17.0"
   },
+  "overrides": {
+    "usb": "noop-package@1.0.0"
+  },
+  "overrides": {
+    "usb": "./scripts/usb-stub"
+  },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"

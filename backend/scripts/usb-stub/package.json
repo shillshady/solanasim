@@ -1,0 +1,6 @@
+{
+  "name": "usb",
+  "version": "2.16.0",
+  "description": "Stub to prevent native build in backend",
+  "main": "index.js"
+}
